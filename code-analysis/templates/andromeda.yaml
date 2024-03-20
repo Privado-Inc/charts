@@ -256,20 +256,30 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: {{ .Values.andromeda.node.hostname }}
       {{- end }}
-      {{- if .Values.andromeda.node.affinity.enable }}
+      {{- if or .Values.node.affinity.enable .Values.andromeda.node.affinity.enable }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
+                  {{- if or .Values.andromeda.node.affinity.enable }}
                   - key: {{ .Values.andromeda.node.affinity.key }}
                     operator: {{ .Values.andromeda.node.affinity.operator }}
+                  {{- else if .Values.node.affinity.enable }}
+                  - key: {{ .Values.node.affinity.key }}
+                    operator: {{ .Values.node.affinity.operator }}
+                  {{- end}}
       {{- end }}
-      {{- if .Values.andromeda.node.toleration.enable }}
+      {{- if or .Values.node.toleration.enable .Values.andromeda.node.affinity }}
       tolerations:
       - key: {{ .Values.andromeda.node.toleration.key }}
         operator: {{ .Values.andromeda.node.toleration.operator }}
         effect: {{ .Values.andromeda.node.toleration.effect }}
+      {{- else if .Values.node.toleration.enable }}
+      tolerations:
+      - key: {{ .Values.node.toleration.key }}
+        operator: {{ .Values.node.toleration.operator }}
+        effect: {{ .Values.node.toleration.effect }}
       {{- end }}
       containers:        
       - name: andromeda

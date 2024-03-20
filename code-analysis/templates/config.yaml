@@ -35,10 +35,14 @@ data:
 
   {{- if .Values.andromeda.node.affinity.enable }}
   K8S_AFFINITY_KEY: {{ .Values.andromeda.node.affinity.key }}
+  {{- else if .Values.node.affinity.enable }}
+  K8S_AFFINITY_KEY: {{ .Values.node.affinity.key }}
   {{- end }}
 
   {{- if .Values.andromeda.node.toleration.enable }}
   K8S_TOLERATION_KEY: {{ .Values.andromeda.node.toleration.key }}
+  {{- else if .Values.node.toleration.enable }}
+  K8S_TOLERATION_KEY: {{ .Values.node.toleration.key }}
   {{- end }}
 
   {{- range $key, $val := .Values.config.data }}
