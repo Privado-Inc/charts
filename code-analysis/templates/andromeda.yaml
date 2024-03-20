@@ -262,7 +262,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  {{- if or .Values.andromeda.node.affinity.enable }}
+                  {{- if .Values.andromeda.node.affinity.enable }}
                   - key: {{ .Values.andromeda.node.affinity.key }}
                     operator: {{ .Values.andromeda.node.affinity.operator }}
                   {{- else if .Values.node.affinity.enable }}
@@ -270,7 +270,7 @@ spec:
                     operator: {{ .Values.node.affinity.operator }}
                   {{- end}}
       {{- end }}
-      {{- if or .Values.node.toleration.enable .Values.andromeda.node.affinity }}
+      {{- if .Values.andromeda.node.affinity }}
       tolerations:
       - key: {{ .Values.andromeda.node.toleration.key }}
         operator: {{ .Values.andromeda.node.toleration.operator }}

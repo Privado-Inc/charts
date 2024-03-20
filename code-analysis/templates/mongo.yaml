@@ -85,7 +85,7 @@ spec:
     spec:
       restartPolicy: {{ .Values.base.podRestartPolicy }}
       terminationGracePeriodSeconds: 15
-      {{- if or .Values.node.affinity.enable }}
+      {{- if .Values.node.affinity.enable }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

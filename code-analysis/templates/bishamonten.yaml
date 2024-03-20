@@ -61,7 +61,7 @@ spec:
       imagePullSecrets:
       - name: {{ .Values.base.imagePullSecret }}
       restartPolicy: {{ .Values.base.podRestartPolicy }}
-      {{- if or .Values.node.affinity.enable }}
+      {{- if .Values.node.affinity.enable }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
