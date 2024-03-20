@@ -270,7 +270,7 @@ spec:
                     operator: {{ .Values.node.affinity.operator }}
                   {{- end}}
       {{- end }}
-      {{- if .Values.andromeda.node.affinity }}
+      {{- if .Values.andromeda.node.toleration.enable }}
       tolerations:
       - key: {{ .Values.andromeda.node.toleration.key }}
         operator: {{ .Values.andromeda.node.toleration.operator }}
