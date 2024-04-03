@@ -1,0 +1,343 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.andromeda.serviceName }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+    {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+    {{- end }}
+    
+spec:
+  type: {{ .Values.andromeda.serviceType }}
+  selector:
+    app: {{ .Values.andromeda.podAppLabel }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.andromeda.servicePort }} 
+      targetPort: {{ .Values.andromeda.containerPort }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: privado-scanner-role
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+    {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+    {{- end }}
+rules:
+  - apiGroups: ["batch"]
+    resources:
+      - jobs
+    verbs:
+      - 'get'
+      - 'list'
+      - 'describe'
+      - 'logs'
+      - 'create'
+  - apiGroups: [""]
+    resources: 
+      - pods
+      - pods/log
+    verbs: 
+      - list
+      - get
+      - logs
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: privado-scanner-rb
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+    {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+    {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: privado-scanner-sa
+roleRef:
+  kind: Role
+  name: privado-scanner-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: privado-scanner-sa
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+    {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+    {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.andromeda.volumes.dataVolume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+
+spec:
+  storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
+  accessModes:
+    {{- range .Values.andromeda.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.andromeda.volumes.dataVolume.storage }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.andromeda.volumes.repoVolume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+    {{- if .Values.customAnnotations }}
+    {{- toYaml .Values.customAnnotations | nindent 4 }}
+    {{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+
+spec:
+  storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
+  accessModes:
+    {{- range .Values.andromeda.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.andromeda.volumes.repoVolume.storage }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.andromeda.volumes.scanLogsVolume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+    {{- if .Values.customAnnotations }}
+    {{- toYaml .Values.customAnnotations | nindent 4 }}
+    {{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+spec:
+  storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
+  accessModes:
+    {{- range .Values.andromeda.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.andromeda.volumes.scanLogsVolume.storage }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.andromeda.volumes.scanResultsVolume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+    {{- if .Values.customAnnotations }}
+    {{- toYaml .Values.customAnnotations | nindent 4 }}
+    {{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+spec:
+  storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
+  accessModes:
+    {{- range .Values.andromeda.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.andromeda.volumes.scanResultsVolume.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.andromeda.deploymentName }}
+  labels: 
+    app: andromeda
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- end }}
+spec:
+  # deployment to pod mapping
+  replicas: {{ .Values.andromeda.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.andromeda.podAppLabel }} 
+  # pod template
+  template: 
+    metadata:
+      labels:
+        app: {{ .Values.andromeda.podAppLabel }}
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 8}}
+{{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum | quote }}
+        checksum/enterprise.conf: {{ include (print $.Template.BasePath "/config.andromeda-enterpise-conf.yaml") . | sha256sum | quote }}
+        checksum/nginx.conf: {{ include (print $.Template.BasePath "/config.andromeda-nginx-conf.yaml") . | sha256sum | quote }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 8 }}
+{{- end }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.base.imagePullSecret }}
+      restartPolicy: {{ .Values.base.podRestartPolicy }}
+      serviceAccountName: privado-scanner-sa
+      {{- if .Values.andromeda.node.hostname }}
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.andromeda.node.hostname }}
+      {{- end }}
+      {{- if .Values.andromeda.node.affinity.enable }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{ .Values.andromeda.node.affinity.key }}
+                    operator: {{ .Values.andromeda.node.affinity.operator }}
+      {{- end }}
+      {{- if .Values.andromeda.node.toleration.enable }}
+      tolerations:
+      - key: {{ .Values.andromeda.node.toleration.key }}
+        operator: {{ .Values.andromeda.node.toleration.operator }}
+        effect: {{ .Values.andromeda.node.toleration.effect }}
+      {{- end }}
+      containers:        
+      - name: andromeda
+        image: {{ tpl .Values.andromeda.image.name . }}:{{ .Values.andromeda.image.tag }}
+        imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.andromeda.containerPort }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Values.config.name }}
+        - secretRef:
+            name: {{ .Values.mongo.secrets.name }}
+        {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory .Values.andromeda.resources.limits.cpu .Values.andromeda.resources.limits.memory }}
+        resources:
+          {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory }}
+          requests: 
+            {{- if .Values.andromeda.resources.requests.cpu }}
+            cpu: {{ .Values.andromeda.resources.requests.cpu | quote }}
+            {{- end }}
+            {{- if .Values.andromeda.resources.requests.memory }}
+            memory: {{ .Values.andromeda.resources.requests.memory | quote }}
+            {{- end }}
+          {{- end}}
+          {{- if or .Values.andromeda.resources.limits.cpu .Values.andromeda.resources.limits.memory }}
+          limits: 
+            {{- if .Values.andromeda.resources.limits.cpu }}
+            cpu: {{ .Values.andromeda.resources.limits.cpu | quote }}
+            {{- end }}
+            {{- if .Values.andromeda.resources.limits.memory }}
+            memory: {{ .Values.andromeda.resources.limits.memory | quote }}
+            {{- end }}
+          {{- end}}
+        {{- end}}
+        volumeMounts:
+        - name: andromeda-data
+          readOnly: false
+          mountPath: {{ .Values.andromeda.volumes.dataVolume.mountPath }}
+        - name: andromeda-repositories
+          readOnly: false
+          mountPath: {{ .Values.andromeda.volumes.repoVolume.mountPath }}
+        - name: andromeda-scan-logs
+          readOnly: false
+          mountPath: {{ .Values.andromeda.volumes.scanLogsVolume.mountPath }}
+        - name: andromeda-scan-results
+          readOnly: false
+          mountPath: {{ .Values.andromeda.volumes.scanResultsVolume.mountPath }}
+        - name: enterprise-conf
+          mountPath: /home/ubuntu/install/code/andromeda-on-premise/scripts/enterprise.conf
+          subPath: enterprise.conf
+        - name: nginx-conf
+          mountPath: /etc/nginx/sites-enabled/andromeda-on-premise-enterprise.conf
+          subPath: andromeda-on-premise-enterprise.conf
+      volumes:
+      - name: andromeda-data
+        persistentVolumeClaim:
+          claimName: {{ .Values.andromeda.volumes.dataVolume.claimName }}
+      - name: andromeda-repositories
+        persistentVolumeClaim:
+          claimName: {{ .Values.andromeda.volumes.repoVolume.claimName }}
+      - name: andromeda-scan-logs
+        persistentVolumeClaim:
+          claimName: {{ .Values.andromeda.volumes.scanLogsVolume.claimName }}
+      - name: andromeda-scan-results
+        persistentVolumeClaim:
+          claimName: {{ .Values.andromeda.volumes.scanResultsVolume.claimName }}
+      - name: enterprise-conf
+        configMap:
+          name: andromeda-enterprise-conf
+      - name: nginx-conf
+        configMap:
+          name: andromeda-nginx-conf

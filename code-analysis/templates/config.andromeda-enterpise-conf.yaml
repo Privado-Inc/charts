@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: andromeda-enterprise-conf
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+  {{- end }}
+data:
+  enterprise.conf: | 
+    _SERVER_NAME_={{ .Values.base.host | quote }}
+    CONFIG_UI_HOST={{ tpl "{{ .Values.base.protocol }}://{{ .Values.base.host }}/" . | quote }}
+    CONFIG_BACKEND_HOST={{ tpl "{{ .Values.base.protocol }}://{{ .Values.base.host }}/" . | quote }}
+    CONFIG_PARTY_SCANNER_IMAGE_URI="638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/party-scanner:latest"
+    {{- range $key, $val := .Values.andromeda.enterpriseConf }}
+    {{ $key }}={{ $val | quote }}
+    {{- end }}

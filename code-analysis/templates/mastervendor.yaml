@@ -1,0 +1,60 @@
+{{- if .Values.base.enableMasterVendorMigration }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.mastervendor.jobName }}
+  labels:
+    app: mastervendor
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- end }}
+spec:
+  # pod template
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mastervendor.podAppLabel }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum | quote }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.base.imagePullSecret }}
+      restartPolicy: {{ .Values.mastervendor.podRestartPolicy }}
+      containers:
+      - name: mastervendor
+        image: {{ tpl .Values.mastervendor.image.name . }}:{{ .Values.mastervendor.image.tag }}
+        imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Values.config.name }}
+        - secretRef:
+            name: {{ .Values.mongo.secrets.name }}
+        {{- if or .Values.mastervendor.resources.requests.cpu .Values.mastervendor.resources.requests.memory .Values.mastervendor.resources.limits.cpu .Values.mastervendor.resources.limits.memory }}
+        resources:
+          {{- if or .Values.mastervendor.resources.requests.cpu .Values.mastervendor.resources.requests.memory }}
+          requests:
+            {{- if .Values.mastervendor.resources.requests.cpu }}
+            cpu: {{ .Values.mastervendor.resources.requests.cpu | quote }}
+            {{- end }}
+            {{- if .Values.mastervendor.resources.requests.memory }}
+            memory: {{ .Values.mastervendor.resources.requests.memory | quote }}
+            {{- end }}
+          {{- end}}
+          {{- if or .Values.mastervendor.resources.limits.cpu .Values.mastervendor.resources.limits.memory }}
+          limits:
+            {{- if .Values.mastervendor.resources.limits.cpu }}
+            cpu: {{ .Values.mastervendor.resources.limits.cpu | quote }}
+            {{- end }}
+            {{- if .Values.mastervendor.resources.limits.memory }}
+            memory: {{ .Values.mastervendor.resources.limits.memory | quote }}
+            {{- end }}
+          {{- end}}
+        {{- end}}
+{{- end}}

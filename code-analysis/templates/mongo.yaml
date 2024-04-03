@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mongo.serviceName }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+  {{- end }}
+spec:
+  clusterIP: None # Since replicasets connect to particular pods (with identitites: statefulset)
+  selector:
+    app: mongo 
+  ports:
+    - protocol: TCP
+      port: {{ .Values.mongo.servicePort }}
+      targetPort: {{ .Values.mongo.containerPort }} 
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.mongo.statefulSetName }}
+  labels: 
+    app: mongo
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- end }}
+spec:
+  replicas: 1
+  serviceName: {{ .Values.mongo.serviceName }}
+  selector:
+    matchLabels:
+      app: mongo
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Values.mongo.volume.claimName }}
+        annotations:
+          {{- range $key, $val := .Values.mongo.volume.annotations }}
+          {{ $key }}: {{ $val | quote }}
+          {{- end }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 12 }}
+{{- end }}
+        {{- if .Values.customLabels }}
+        labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 12}}
+{{- end }}
+        {{- end }}
+      spec:
+        storageClassName: {{ .Values.mongo.volume.storageClass }}
+        accessModes:
+          {{- range .Values.mongo.volume.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.mongo.volume.storage }}
+  template:
+    metadata:
+      labels:
+        app: mongo
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 8}}
+{{- end }}
+      {{- if .Values.customAnnotations }}
+      annotations:
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 8 }}
+{{- end }}
+      {{- end }}
+    spec:
+      restartPolicy: {{ .Values.base.podRestartPolicy }}
+      terminationGracePeriodSeconds: 15
+      initContainers:
+      - name: init-mongo-encryption
+        image: busybox
+        env:
+        - name: KEY_FILE
+          value: {{ tpl .Values.mongo.encryptionSecret.mountPath . }}
+        - name: MONGO_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.mongo.encryptionSecret.name }}
+              key: MONGO_ENCRYPTION_KEY
+        command: ['/bin/sh', '-c', 'if [ -n "$MONGO_ENCRYPTION_KEY" ]; then echo -n $MONGO_ENCRYPTION_KEY > $KEY_FILE && chmod 600 $KEY_FILE && chown 1001:1001 $KEY_FILE; fi']
+        volumeMounts:
+        - name: encryption-key-volume
+          mountPath: {{ .Values.mongo.encryptionSecret.mountDirectory }}
+      containers:
+      - name: mongo
+        image: {{ .Values.mongo.image.name }}:{{ .Values.mongo.image.tag }}
+        securityContext:
+          runAsUser: {{ .Values.mongo.runAsUser }}
+        imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+        tty: true
+        args: [
+          "--wiredTigerCacheSizeGB={{ .Values.mongo.wiredTigerCacheSizeGB }}",
+          "--enableEncryption",
+          "--encryptionKeyFile={{ tpl .Values.mongo.encryptionSecret.mountPath . }}"
+        ]
+        ports:
+        - containerPort: {{ .Values.mongo.containerPort }}
+        envFrom:
+        - secretRef:
+            name: {{ .Values.mongo.secrets.name }}
+        {{- if or .Values.mongo.resources.requests.cpu .Values.mongo.resources.requests.memory .Values.mongo.resources.limits.cpu .Values.mongo.resources.limits.memory }}
+        resources:
+          {{- if or .Values.mongo.resources.requests.cpu .Values.mongo.resources.requests.memory }}
+          requests: 
+            {{- if .Values.mongo.resources.requests.cpu }}
+            cpu: {{ .Values.mongo.resources.requests.cpu | quote }}
+            {{- end }}
+            {{- if .Values.mongo.resources.requests.memory }}
+            memory: {{ .Values.mongo.resources.requests.memory | quote }}
+            {{- end }}
+          {{- end}}
+          {{- if or .Values.mongo.resources.limits.cpu .Values.mongo.resources.limits.memory }}
+          limits: 
+            {{- if .Values.mongo.resources.limits.cpu }}
+            cpu: {{ .Values.mongo.resources.limits.cpu | quote }}
+            {{- end }}
+            {{- if .Values.mongo.resources.limits.memory }}
+            memory: {{ .Values.mongo.resources.limits.memory | quote }}
+            {{- end }}
+          {{- end}}
+        {{- end}}
+        volumeMounts:
+        - name: {{ .Values.mongo.volume.claimName }}
+          mountPath: {{ .Values.mongo.volume.mountPath | quote }}
+        - name: encryption-key-volume
+          mountPath: {{ .Values.mongo.encryptionSecret.mountDirectory }}
+          readOnly: true
+      volumes:
+      - name: encryption-key-volume
+        emptyDir: {}

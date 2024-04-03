@@ -1,0 +1,290 @@
+
+# --- My values below this
+base:
+  isProduction: true
+  testRegion: ap-south-1
+  prodRegion: eu-west-1
+  host: "_CUSTOMER_HOST_NAME_"  # NEEDS-CUSTOMER-INPUT
+  protocol: "http"
+  clusterDomain: cluster.local  # NEEDS-CUSTOMER-INPUT
+  imagePullSecret: regcred
+  imagePullPolicy: Always
+  podRestartPolicy: Always
+  enableMasterVendorMigration: false
+
+# This label will be added to all the k8s resources managed by privado
+customLabels: {}
+
+# This annotation will be added to all the k8s resources managed by privado
+customAnnotations: {}
+
+
+# values related to registry secrets & cron
+registry:
+  region: "{{ if .Values.base.isProduction }} {{ .Values.base.prodRegion }} {{ else }} {{ .Values.base.testRegion }} {{ end }}"
+  roleName: ecr-token-helper
+  serviceAccountName: sa-ecr-token-helper
+  roleBindingName: ecr-token-helper
+  cronName: ecr-token-helper
+  cronSchedule: "0 */6 * * *"
+  cronPodRestartPolicy: OnFailure
+  image:
+    name: public.ecr.aws/privado/awscli-kubectl
+    tag: latest
+  helmHookAnnotations:
+    "helm.sh/hook": "pre-install,pre-upgrade"
+  secrets:
+    name: ecr-iam-secrets
+    AWS_ACCESS_KEY_ID: 
+    AWS_SECRET_ACCESS_KEY: 
+  dockerhub:
+    # keep value of below flag as true if you are using images from dockerhub
+    enable: false
+#    The namespace is the first part of a Docker image name, followed by the repository name.
+#    The general format for referencing Docker images is: namespace/repository:tag
+    namespace: privadoai
+    username:
+    password:
+
+
+updates:
+  annotationName: "checksum/image-sha256"
+  roleName: updater-role
+  serviceAccountName: updater-sa
+  roleBindingName: updater-rb
+  cronName: updater
+  cronSchedule: "*/10 * * * *"
+  cronPodRestartPolicy: OnFailure
+  image:
+    name: public.ecr.aws/privado/awscli-kubectl
+    tag: latest
+
+
+# specific values related to ingress
+ingress:
+  name: privado-ingress
+  # needs this value from customer for their ingressClass
+  # since most annotation-based support for controllers is now deprecated
+  ingressClassName: "" # NEEDS-CUSTOMER-INPUT
+  annotations:  # NEEDS-CUSTOMER-INPUT
+    kubernetes.io/ingress.class: alb  # may receive deprecated warning
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+
+# Values related to mongo.yaml
+mongo:
+  statefulSetName: mongo
+  image:
+    name: percona/percona-server-mongodb
+    tag: "5.0"
+  runAsUser: 0
+  serviceName: mongo-service
+  servicePort: 27017
+  containerPort: 27017
+  wiredTigerCacheSizeGB: "4"
+  resources:
+    requests:
+      cpu: "2.0"
+      memory: "4Gi"
+    limits:
+      cpu:
+      memory:
+  volume:
+    claimName: privado-mongo-volume
+    storageClass: ""    # NEEDS-CUSTOMER-INPUT
+    accessModes: [ "ReadWriteOnce" ]
+    storage: 100Gi
+    mountPath: "/data/db"
+    annotations:
+  secrets:
+    name: mongo-secrets
+    MONGO_INITDB_ROOT_USERNAME: 
+    MONGO_INITDB_ROOT_PASSWORD: 
+  encryptionSecret:
+    name: mongo-encrpytion-secret
+    mountDirectory: "/keys"
+    mountPath: "{{ .Values.mongo.encryptionSecret.mountDirectory }}/mong_opener"  # use with tpl
+    # generated using `openssl rand -base64 32`
+    # [WARNING] changing this for a live deployment will render the database unusable
+    MONGO_ENCRYPTION_KEY: "_CUSTOMER_MONGO_ENCRYPTION_KEY_"     # NEEDS-CUSTOMER-INPUT
+
+
+# Values related scanner -> config.yaml
+config:
+  name: config
+  data:
+    # values added here will be populated directly in configMap
+    # which works as env variables for andromeda
+    DEPLOYMENT_GROUP_NAME: "enterprise-env"
+    SCANNER_KIND: k8s
+    SCANNER_MINIMUM_RAM: 3Gi
+    SCANNER_MINIMUM_CPU: 3
+  # values added here will be populated only if value is defined
+  optionalData:
+    SCANNER_OSS_IMAGE_URL:
+    SCANNER_APP_INSPECTOR_IMAGE_URL:
+
+
+# Values related to andromeda.yaml
+andromeda:
+  deploymentName: andromeda
+  replicas: 1
+  image:
+    name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/andromeda"
+    tag: latest
+  podAppLabel: andromeda
+  serviceName: andromeda-service
+  serviceType: ClusterIP
+  servicePort: 6001
+  containerPort: 80
+  resources:
+    requests:
+      cpu: "3.0"
+      memory: "6Gi"
+    limits:
+      cpu:
+      memory:
+  node:
+    hostname: "" # if customer has NFS storage attached then keep this field empty else keep node's "hostname" having larger resources
+    affinity:
+      enable: false
+      key: "PRIVADO_ANDROMEDA_NODE_LABEL"
+      operator: Exists # only Exists supported
+    toleration:
+      enable: false
+      key: "PRIVADO_ANDROMEDA_NODE_TAINT"
+      operator: Exists # only Exists supported
+      effect: NoSchedule # only NoSchedule supported
+  volumes:
+    # common settings
+    storageClass: "efs-sc"    # NEEDS-CUSTOMER-INPUT # needs to support RWX
+    accessModes: [ "ReadWriteMany" ]  # NEEDS-CUSTOMER-INPUT # depends on node.hostname
+    annotations:
+    # specific settings
+    dataVolume:
+      claimName: privado-andromeda-data-volume
+      storage: 10Gi    # 50
+      mountPath: "/home/ubuntu/install/data"
+    repoVolume:
+      claimName: privado-andromeda-repositories-volume
+      storage: 50Gi    # 50
+      mountPath: "/home/ubuntu/install/repositories"
+    scanLogsVolume:
+      claimName: privado-andromeda-logs-volume
+      storage: 15Gi    # 5
+      mountPath: "/home/ubuntu/install/scan_logs"
+    scanResultsVolume:
+      claimName: privado-andromeda-results-volume
+      storage: 15Gi
+      mountPath: "/home/ubuntu/install/scan_results"
+  enterpriseConf:
+    PRIVADO_LICENSE_USER_HASH: ""
+    PRIVADO_LICENSE_PRIVATE_KEY: ""
+
+    CONFIG_HUERISTICS_PSW: ""
+    CONFIG_USERS_PSW: ""
+    CONFIG_SCANMANAGER_PSW: ""
+    CONFIG_CODE_ENGINE_MASTER_PSW: ""
+    CONFIG_ASSESSMENTS_PSW: ""
+
+    CUSTOMER_GITLAB_HOST: "CUSTOMER_GITLAB_HOST"
+    CUSTOMER_GITLAB_APP_ID: "CUSTOMER_GITLAB_APP_ID"
+    CUSTOMER_GITLAB_APP_SECRET: "CUSTOMER_GITLAB_APP_SECRET"
+
+    CUSTOMER_GH_APP_ID: ''
+    CUSTOMER_GH_APP_KEY: ""
+    CUSTOMER_GH_WEBHOOK_SECRET: ''
+
+    CUSTOMER_BITBUCKET_CLOUD_APP_KEY: 'CUSTOMER_BITBUCKET_CLOUD_APP_KEY'
+    CUSTOMER_BITBUCKET_CLOUD_APP_SECRET: 'CUSTOMER_BITBUCKET_CLOUD_APP_SECRET'
+
+    SSO_ENABLED_FOR_CUSTOMER: "__OKTA_ENABLED__"
+    CUSTOMER_SSO_DOMAIN: "__CUSTOMER_SSO_DOMAIN__"
+    CUSTOMER_SSO_CLIENT_ID: "__CUSTOMER_SSO_CLIENT_ID__"
+    CUSTOMER_SSO_SUPER_ADMIN_EMAIL: "__CUSTOMER_OKTA_SUPER_ADMIN__"
+    CUSTOMER_SSO_TYPE: "__CUSTOMER_SSO_TYPE__"
+
+    HAS_NO_INTERNET_CONNECTION: "false"
+    CUSTOMER_EMAIL_HOST: "__EMAIL_HOST__"
+    CUSTOMER_EMAIL_PORT: "__EMAIL_PORT__"  # (587 for TLS, 465 for SSL, or 25 for non-encrypted)
+    CUSTOMER_EMAIL_USE_TLS: "__EMAIL_USE_TLS__"  # Set to 1 if your SMTP server uses TLS, 0 if not
+    CUSTOMER_EMAIL_USE_SSL: "__EMAIL_USE_SSL__"  # Set to 1 if your SMTP server uses SSL, 0 if not
+    CUSTOMER_EMAIL_HOST_USER: "__EMAIL_HOST_USER__"  # Your SMTP username
+    CUSTOMER_EMAIL_HOST_PASSWORD: "__EMAIL_HOST_PASSWORD__"
+    CUSTOMER_EMAIL_FROM: "__EMAIL_EMAIL_FROM__"
+    CUSTOMER_SUPPORT_EMAIL: "__EMAIL_EMAIL_SUPPORT__"
+    CUSTOMER_EMAIL_SSL_CERTFILE: "__EMAIL_SSL_CERT__"
+    CUSTOMER_EMAIL_SSL_KEYFILE: "__EMAIL_SSL_KEY__"
+
+    CONFIG_AI_SERVICE_AVAILABLE: "false"
+    CONFIG_AI_SERVICE_PATH: ""
+
+
+# Values related to janus.yaml
+janus:
+  volumes:
+    storageClass: "efs-sc"    # NEEDS-CUSTOMER-INPUT  # should support RWX
+    accessModes: [ "ReadWriteMany" ]    # NEEDS-CUSTOMER-INPUT # depends on andromeda.node.hostname
+    annotations:
+    # specific settings
+    m2Volume:
+      claimName: privado-janus-m2cache-volume
+      storage: 10Gi
+      mountPath: "/root/.m2"
+    gradleVolume:
+      claimName: privado-janus-gradlecache-volume
+      storage: 10Gi
+      mountPath: "/root/.gradle"
+
+
+# Values related to bishamonten.yaml
+bishamonten:
+  deploymentName: bishamonten
+  replicas: 1
+  image:
+    name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/bishamonten"
+    tag: latest
+  podAppLabel: bishamonten
+  serviceName: bishamonten-service
+  serviceType: ClusterIP
+  servicePort: 4000
+  containerPort: 4000
+  resources:
+    requests:
+      cpu: "1.0"
+      memory: "512Mi"
+    limits:
+      cpu:
+      memory:
+  volumeHostConfig:
+    configName: bishamonten-hostconfig
+    subPath: "env.js"
+    mountPath: "/home/bishamonten/build/{{ .Values.bishamonten.volumeHostConfig.subPath }}"   # use with tpl
+  config:
+    hostConfig:
+      host: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'   # use with tpl
+      accountHost: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'    # use with tpl
+      isPremiseVersion: 1
+
+mastervendor:
+  image:
+    name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/master-vendor-base-image"
+    tag: latest
+  podRestartPolicy: Never
+  podAppLabel: mastervendor
+  serviceName: mastervendor-service
+  jobName: mastervendor
+  resources:
+    requests:
+      cpu: "0.5"
+      memory: "300Mi"
+    limits:
+      cpu:
+      memory:
+
+websitescan:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 200Mi

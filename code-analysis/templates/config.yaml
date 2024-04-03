@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.config.name }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+  {{- end }}
+data:
+  MONGO_HOST: {{ .Values.mongo.statefulSetName }}-0.{{ .Values.mongo.serviceName }}.{{ .Release.Namespace }}.svc.{{ .Values.base.clusterDomain }}
+  MONGODB_HOST: {{ .Values.mongo.statefulSetName }}-0.{{ .Values.mongo.serviceName }}.{{ .Release.Namespace }}.svc.{{ .Values.base.clusterDomain }}
+  IS_PRODUCTION: "{{ if .Values.base.isProduction }}1{{ else }}0{{ end }}"
+  K8S_NAMESPACE: {{ .Release.Namespace }}
+  K8S_DATA_PVC_NAME: {{ .Values.andromeda.volumes.dataVolume.claimName }}
+  K8S_REPO_PVC_NAME: {{ .Values.andromeda.volumes.repoVolume.claimName }}
+  K8S_SCANLOGS_PVC_NAME: {{ .Values.andromeda.volumes.scanLogsVolume.claimName }}
+  K8S_SCANRESULTS_PVC_NAME: {{ .Values.andromeda.volumes.scanResultsVolume.claimName }}
+  K8S_M2CACHE_PVC_NAME: {{ .Values.janus.volumes.m2Volume.claimName }}
+  K8S_GRADLECACHE_PVC_NAME: {{ .Values.janus.volumes.gradleVolume.claimName }}
+  K8S_IMAGE_PULL_SECRET: {{ .Values.base.imagePullSecret }}
+  K8S_WEBSITE_SCAN_MIN_CPU: {{ .Values.websitescan.resources.requests.cpu }}
+  K8S_WEBSITE_SCAN_MIN_RAM: {{ .Values.websitescan.resources.requests.memory }}
+
+  {{- if .Values.andromeda.node.hostname }}
+  K8S_NODE_HOST_NAME: {{ .Values.andromeda.node.hostname }}
+  {{- end }}
+
+  {{- if .Values.andromeda.node.affinity.enable }}
+  K8S_AFFINITY_KEY: {{ .Values.andromeda.node.affinity.key }}
+  {{- end }}
+
+  {{- if .Values.andromeda.node.toleration.enable }}
+  K8S_TOLERATION_KEY: {{ .Values.andromeda.node.toleration.key }}
+  {{- end }}
+
+  {{- range $key, $val := .Values.config.data }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+
+  {{- range $key, $val := .Values.config.optionalData }}
+  {{- if $val }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+  {{- end }}

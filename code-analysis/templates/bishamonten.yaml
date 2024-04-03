@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.bishamonten.serviceName }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+    {{- end }}
+spec:
+  type: {{ .Values.bishamonten.serviceType }}
+  selector:
+    app: {{ .Values.bishamonten.podAppLabel }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.bishamonten.servicePort }}
+      targetPort: {{ .Values.bishamonten.containerPort }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.bishamonten.deploymentName }}
+  labels: 
+    app: bishamonten
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+  {{- end }}
+spec:
+  # deployment to pod mapping
+  replicas: {{ .Values.bishamonten.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.bishamonten.podAppLabel }}
+  # pod template
+  template: 
+    metadata:
+      labels:
+        app: {{ .Values.bishamonten.podAppLabel }}
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 8}}
+{{- end }}
+      annotations:
+        checksum/hostconfig: {{ include (print $.Template.BasePath "/config.bishamonten-hostconfig.yaml") . | sha256sum | quote }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 8 }}
+{{- end }}
+    spec:
+      imagePullSecrets:
+      - name: {{ .Values.base.imagePullSecret }}
+      restartPolicy: {{ .Values.base.podRestartPolicy }}
+      containers:        
+      - name: bishamonten
+        image: {{ tpl .Values.bishamonten.image.name . }}:{{ .Values.bishamonten.image.tag }}
+        imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.bishamonten.containerPort }}
+        {{- if or .Values.bishamonten.resources.requests.cpu .Values.bishamonten.resources.requests.memory .Values.bishamonten.resources.limits.cpu .Values.bishamonten.resources.limits.memory }}
+        resources:
+          {{- if or .Values.bishamonten.resources.requests.cpu .Values.bishamonten.resources.requests.memory }}
+          requests: 
+            {{- if .Values.bishamonten.resources.requests.cpu }}
+            cpu: {{ .Values.bishamonten.resources.requests.cpu | quote }}
+            {{- end }}
+            {{- if .Values.bishamonten.resources.requests.memory }}
+            memory: {{ .Values.bishamonten.resources.requests.memory | quote }}
+            {{- end }}
+          {{- end}}
+          {{- if or .Values.bishamonten.resources.limits.cpu .Values.bishamonten.resources.limits.memory }}
+          limits: 
+            {{- if .Values.bishamonten.resources.limits.cpu }}
+            cpu: {{ .Values.bishamonten.resources.limits.cpu | quote }}
+            {{- end }}
+            {{- if .Values.bishamonten.resources.limits.memory }}
+            memory: {{ .Values.bishamonten.resources.limits.memory | quote }}
+            {{- end }}
+          {{- end}}
+        {{- end}}
+        volumeMounts:
+        - name: hostconfig
+          mountPath: {{ tpl .Values.bishamonten.volumeHostConfig.mountPath . }}
+          subPath: {{ .Values.bishamonten.volumeHostConfig.subPath }}
+      volumes:
+      - name: hostconfig
+        configMap:
+          name: {{ .Values.bishamonten.volumeHostConfig.configName }}

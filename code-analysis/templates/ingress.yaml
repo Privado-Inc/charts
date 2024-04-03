@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.ingress.name }}
+  annotations: 
+    {{- range $key, $val := .Values.ingress.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.base.host }}
+      http:
+        paths:
+          - path: /ce
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.andromeda.serviceName }}
+                port:
+                  number: {{ .Values.andromeda.servicePort }}
+          - path: /ac
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.andromeda.serviceName }}
+                port:
+                  number: {{ .Values.andromeda.servicePort }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.bishamonten.serviceName }}
+                port:
+                  number: {{ .Values.bishamonten.servicePort }}

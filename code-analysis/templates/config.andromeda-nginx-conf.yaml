@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: andromeda-nginx-conf
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+  {{- if .Values.customAnnotations }}
+  annotations:
+{{- if .Values.customAnnotations }}
+{{ toYaml .Values.customAnnotations | nindent 4}}
+{{- end }}
+  {{- end }}
+data:
+  andromeda-on-premise-enterprise.conf: |
+    geo $limited {
+        default     1;
+        127.0.0.1   0;
+    }
+
+    map $limited $api_limit_except_for_localhost {
+        1   $binary_remote_addr;
+        0   "";
+    }
+
+    limit_req_zone $api_limit_except_for_localhost zone=apilimit:10m rate=20r/s;
+    limit_req_zone $api_limit_except_for_localhost zone=limitmagiclinkcalls:10m rate=1r/s;
+
+    server_names_hash_bucket_size  128;
+    
+    server {
+       listen 80;
+       server_name _SERVER_NAME_;
+       return 301 https://$host$request_uri;
+    }
+
+    server {
+       listen 80;
+       server_name {{ .Values.base.host }} {{ .Values.andromeda.serviceName }}.{{ .Release.Namespace }}.svc.{{ .Values.base.clusterDomain }} localhost 127.0.0.1;
+
+       location /ce/ml/ {
+            limit_req zone=limitmagiclinkcalls burst=10 nodelay;
+            add_header Access-Control-Max-Age 3600;
+            add_header Access-Control-Expose-Headers Content-Length;
+            add_header Access-Control-Allow-Methods *;
+            add_header Access-Control-Allow-Headers *;
+            add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
+            add_header Strict-Transport-Security "max-age=63072000;";
+            include         uwsgi_params;
+            uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
+            proxy_read_timeout 180s;
+            client_max_body_size 30M;
+        }
+
+        location /ce/ {
+            limit_req zone=apilimit burst=40 nodelay;
+            add_header Access-Control-Max-Age 3600;
+            add_header Access-Control-Expose-Headers Content-Length;
+            add_header Access-Control-Allow-Methods *;
+            add_header Access-Control-Allow-Headers *;
+            add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
+            add_header Strict-Transport-Security "max-age=63072000;";
+            include         uwsgi_params;
+            uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
+            proxy_read_timeout 180s;
+            client_max_body_size 100M;
+        }
+
+        location /ac/ {
+            limit_req zone=apilimit burst=40 nodelay;
+            add_header Access-Control-Max-Age 3600;
+            add_header Access-Control-Expose-Headers Content-Length;
+            add_header Access-Control-Allow-Methods *;
+            add_header Access-Control-Allow-Headers *;
+            add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
+            add_header Strict-Transport-Security "max-age=63072000;";
+            include         uwsgi_params;
+            uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
+            proxy_read_timeout 180s;
+            client_max_body_size 30M;
+        }
+
+    }

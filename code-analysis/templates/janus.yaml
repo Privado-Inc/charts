@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.janus.volumes.m2Volume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.janus.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+
+spec:
+  storageClassName: {{ .Values.janus.volumes.storageClass }} 
+  accessModes:
+    {{- range .Values.janus.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.janus.volumes.m2Volume.storage }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.janus.volumes.gradleVolume.claimName }}
+  annotations: 
+    {{- range $key, $val := .Values.janus.volumes.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+{{- if .Values.customAnnotations }}
+{{- toYaml .Values.customAnnotations | nindent 4 }}
+{{- end }}
+  {{- if .Values.customLabels }}
+  labels:
+{{- if .Values.customLabels }}
+{{ toYaml .Values.customLabels | nindent 4}}
+{{- end }}
+  {{- end }}
+spec:
+  storageClassName: {{ .Values.janus.volumes.storageClass }} 
+  accessModes:
+    {{- range .Values.janus.volumes.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.janus.volumes.gradleVolume.storage }}
