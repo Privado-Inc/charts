@@ -124,6 +124,7 @@ config:
   optionalData:
     SCANNER_OSS_IMAGE_URL:
     SCANNER_APP_INSPECTOR_IMAGE_URL:
+    WEBSITE_SCANNER_IMAGE_URL:
 
 
 # Values related to andromeda.yaml
