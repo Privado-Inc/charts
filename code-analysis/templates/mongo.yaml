@@ -85,6 +85,21 @@ spec:
     spec:
       restartPolicy: {{ .Values.base.podRestartPolicy }}
       terminationGracePeriodSeconds: 15
+      {{- if .Values.node.affinity.enable }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{ .Values.node.affinity.key }}
+                    operator: {{ .Values.node.affinity.operator }}
+      {{- end }}
+      {{- if .Values.node.toleration.enable }}
+      tolerations:
+      - key: {{ .Values.node.toleration.key }}
+        operator: {{ .Values.node.toleration.operator }}
+        effect: {{ .Values.node.toleration.effect }}
+      {{- end }}
       initContainers:
       - name: init-mongo-encryption
         image: busybox

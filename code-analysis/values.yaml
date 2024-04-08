@@ -60,6 +60,18 @@ updates:
     tag: latest
 
 
+node:
+  affinity:
+    enable: false
+    key: "PRIVADO_ANDROMEDA_NODE_LABEL"
+    operator: Exists # only Exists supported
+  toleration:
+    enable: false
+    key: "PRIVADO_ANDROMEDA_NODE_TAINT"
+    operator: Exists # only Exists supported
+    effect: NoSchedule # only NoSchedule supported
+
+
 # specific values related to ingress
 ingress:
   name: privado-ingress
@@ -145,7 +157,7 @@ andromeda:
     limits:
       cpu:
       memory:
-  node:
+  node:   # overrides the global node configs
     hostname: "" # if customer has NFS storage attached then keep this field empty else keep node's "hostname" having larger resources
     affinity:
       enable: false
