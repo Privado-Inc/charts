@@ -27,8 +27,5 @@ jobs:
     
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
-        with:
-          pages_branch: main
-          charts_dir: code-analysis
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
