@@ -130,7 +130,7 @@ mongo:
     MONGO_INITDB_ROOT_USERNAME: ""
     MONGO_INITDB_ROOT_PASSWORD: ""
   encryptionSecret:
-    name: mongo-encrpytion-secret
+    name: mongo-encryption-secret
     labels:    # key: value
     annotations:    # key: value
     mountDirectory: "/keys"
@@ -192,7 +192,7 @@ andromeda:
       effect: NoSchedule # only NoSchedule supported
   volumes:
     # common settings
-    storageClass: "efs-sc"    # NEEDS-CUSTOMER-INPUT # needs to support RWX
+    storageClass: ""    # NEEDS-CUSTOMER-INPUT # needs to support RWX
     accessModes: [ "ReadWriteMany" ]  # NEEDS-CUSTOMER-INPUT # depends on node.hostname
     annotations:
     # specific settings
@@ -258,7 +258,7 @@ andromeda:
 # Values related to janus.yaml 
 janus:
   volumes:
-    storageClass: "efs-sc"    # NEEDS-CUSTOMER-INPUT  # should support RWX
+    storageClass: ""    # NEEDS-CUSTOMER-INPUT  # should support RWX
     accessModes: [ "ReadWriteMany" ]    # NEEDS-CUSTOMER-INPUT # depends on andromeda.node.hostname
     annotations:
     # specific settings
