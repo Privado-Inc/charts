@@ -2,17 +2,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Values.bishamonten.serviceName }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
+  labels: 
+    {{- range $key, $val := .Values.bishamonten.serviceLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations: 
+    {{- range $key, $val := .Values.bishamonten.serviceAnnotations }}
+    {{ $key }}: {{ $val | quote }}
     {{- end }}
 spec:
   type: {{ .Values.bishamonten.serviceType }}
@@ -29,15 +25,13 @@ metadata:
   name: {{ .Values.bishamonten.deploymentName }}
   labels: 
     app: bishamonten
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
-  {{- end }}
+    {{- range $key, $val := .Values.bishamonten.deploymentLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations: 
+    {{- range $key, $val := .Values.bishamonten.deploymentAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
 spec:
   # deployment to pod mapping
   replicas: {{ .Values.bishamonten.replicas }}
@@ -49,14 +43,8 @@ spec:
     metadata:
       labels:
         app: {{ .Values.bishamonten.podAppLabel }}
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 8}}
-{{- end }}
       annotations:
         checksum/hostconfig: {{ include (print $.Template.BasePath "/config.bishamonten-hostconfig.yaml") . | sha256sum | quote }}
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 8 }}
-{{- end }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.base.imagePullSecret }}

@@ -1,3 +1,4 @@
+{{- if .Values.ingress.enable }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,15 +7,6 @@ metadata:
     {{- range $key, $val := .Values.ingress.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- end }}
 spec:
   {{- if .Values.ingress.ingressClassName }}
   ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
@@ -44,3 +36,4 @@ spec:
                 name: {{ .Values.bishamonten.serviceName }}
                 port:
                   number: {{ .Values.bishamonten.servicePort }}
+{{- end}}

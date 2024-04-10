@@ -1,0 +1,130 @@
+{{- if .Values.registry.enable }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.registry.roleName }}
+  annotations:
+    "helm.sh/hook-weight": "-10"
+    {{- range $key, $val := .Values.registry.helmHookAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - secrets
+      - serviceaccounts
+      - serviceaccounts/token
+    verbs:
+      - 'delete'
+      - 'create'
+      - 'patch'
+      - 'get'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.registry.roleBindingName }}
+  annotations:
+    "helm.sh/hook-weight": "-10"
+    {{- range $key, $val := .Values.registry.helmHookAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.registry.serviceAccountName }}
+roleRef:
+  kind: Role
+  name: {{ .Values.registry.roleName }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.registry.serviceAccountName }}
+  annotations:
+    "helm.sh/hook-weight": "-10"
+    {{- range $key, $val := .Values.registry.helmHookAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.registry.cronName }}-job
+  labels:
+    {{- range $key, $val := .Values.registry.cronjobLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations:
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    {{- range $key, $val := .Values.registry.helmHookAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+    {{- range $key, $val := .Values.registry.cronjobAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      serviceAccountName: {{ .Values.registry.serviceAccountName }}
+      restartPolicy: {{ .Values.registry.cronPodRestartPolicy }}
+      {{- if .Values.node.affinity.enable }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{ .Values.node.affinity.key }}
+                    operator: {{ .Values.node.affinity.operator }}
+      {{- end }}
+      {{- if .Values.node.toleration.enable }}
+      tolerations:
+      - key: {{ .Values.node.toleration.key }}
+        operator: {{ .Values.node.toleration.operator }}
+        effect: {{ .Values.node.toleration.effect }}
+      {{- end }}
+      containers:
+        - name: registry-token-helper
+          image: {{ .Values.registry.image.name }}:{{ .Values.registry.image.tag }}
+          imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |-
+              kubectl delete secret -n $NAMESPACE --ignore-not-found $SECRET_NAME
+              if [ -n "$DOCKERHUB_USERNAME" ]; then
+                kubectl create secret -n $NAMESPACE docker-registry $SECRET_NAME \
+                --docker-server=https://index.docker.io/v1/ \
+                --docker-username=$DOCKERHUB_USERNAME \
+                --docker-password=$DOCKERHUB_PASSWORD
+              else
+                TOKEN=`aws ecr get-login-password --region ${REGION} | cut -d' ' -f6`
+                kubectl create secret -n $NAMESPACE docker-registry $SECRET_NAME \
+                --docker-server=$ECR_REPOSITORY \
+                --docker-username=AWS \
+                --docker-password=$TOKEN
+              fi
+          envFrom:
+          - secretRef:
+              name: {{ .Values.registry.secrets.name }}
+          env:
+            - name: SECRET_NAME
+              value: {{ .Values.base.imagePullSecret }}
+            {{- if .Values.registry.secrets.AWS_ACCESS_KEY_ID }}
+            - name: REGION
+              value: {{ tpl .Values.registry.region . }}
+            - name: ECR_REPOSITORY
+              value: 638117407428.dkr.ecr.{{ tpl .Values.registry.region . | trim }}.amazonaws.com
+            {{- end }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+            {{- if .Values.registry.dockerhub.enable }}
+            - name: DOCKERHUB_USERNAME
+              value: {{ .Values.registry.dockerhub.username }}
+            - name: DOCKERHUB_PASSWORD
+              value: {{ .Values.registry.dockerhub.password }}
+            {{- end }}
+            
+{{- end }}

@@ -2,19 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Values.andromeda.serviceName }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
+  labels: 
+    {{- range $key, $val := .Values.andromeda.serviceLabels }}
+    {{ $key }}: {{ $val | quote }}
     {{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.serviceAnnotations }}
+    {{ $key }}: {{ $val | quote }}
     {{- end }}
-    
 spec:
   type: {{ .Values.andromeda.serviceType }}
   selector:
@@ -28,18 +23,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: privado-scanner-role
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-    {{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
-    {{- end }}
 rules:
   - apiGroups: ["batch"]
     resources:
@@ -64,18 +47,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: privado-scanner-rb
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-    {{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
-    {{- end }}
 subjects:
   - kind: ServiceAccount
     name: privado-scanner-sa
@@ -88,18 +59,6 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: privado-scanner-sa
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-    {{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{ toYaml .Values.customAnnotations | nindent 4}}
-{{- end }}
-    {{- end }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -109,16 +68,6 @@ metadata:
     {{- range $key, $val := .Values.andromeda.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
-
 spec:
   storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
   accessModes:
@@ -137,16 +86,6 @@ metadata:
     {{- range $key, $val := .Values.andromeda.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-    {{- if .Values.customAnnotations }}
-    {{- toYaml .Values.customAnnotations | nindent 4 }}
-    {{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
-
 spec:
   storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
   accessModes:
@@ -165,15 +104,6 @@ metadata:
     {{- range $key, $val := .Values.andromeda.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-    {{- if .Values.customAnnotations }}
-    {{- toYaml .Values.customAnnotations | nindent 4 }}
-    {{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
 spec:
   storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
   accessModes:
@@ -192,15 +122,6 @@ metadata:
     {{- range $key, $val := .Values.andromeda.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-    {{- if .Values.customAnnotations }}
-    {{- toYaml .Values.customAnnotations | nindent 4 }}
-    {{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
 spec:
   storageClassName: {{ .Values.andromeda.volumes.storageClass }} # for eks "gp2" -> default
   accessModes:
@@ -217,15 +138,13 @@ metadata:
   name: {{ .Values.andromeda.deploymentName }}
   labels: 
     app: andromeda
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- end }}
+    {{- range $key, $val := .Values.andromeda.deploymentLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations: 
+    {{- range $key, $val := .Values.andromeda.deploymentAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
 spec:
   # deployment to pod mapping
   replicas: {{ .Values.andromeda.replicas }}
@@ -237,16 +156,10 @@ spec:
     metadata:
       labels:
         app: {{ .Values.andromeda.podAppLabel }}
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 8}}
-{{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum | quote }}
         checksum/enterprise.conf: {{ include (print $.Template.BasePath "/config.andromeda-enterpise-conf.yaml") . | sha256sum | quote }}
         checksum/nginx.conf: {{ include (print $.Template.BasePath "/config.andromeda-nginx-conf.yaml") . | sha256sum | quote }}
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 8 }}
-{{- end }}
     spec:
       imagePullSecrets:
       - name: {{ .Values.base.imagePullSecret }}

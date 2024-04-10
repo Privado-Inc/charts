@@ -1,19 +1,17 @@
-{{- if .Values.base.enableMasterVendorMigration }}
+{{- if .Values.mastervendor.enable }}
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Values.mastervendor.jobName }}
-  labels:
+  labels: 
     app: mastervendor
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- if .Values.customAnnotations }}
-  annotations:
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- end }}
+    {{- range $key, $val := .Values.mastervendor.jobLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations: 
+    {{- range $key, $val := .Values.mastervendor.jobAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
 spec:
   # pod template
   ttlSecondsAfterFinished: 300

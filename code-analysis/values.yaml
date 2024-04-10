@@ -10,24 +10,23 @@ base:
   imagePullSecret: regcred
   imagePullPolicy: Always
   podRestartPolicy: Always
-  enableMasterVendorMigration: false
-
-# This label will be added to all the k8s resources managed by privado
-customLabels: {}
-
-# This annotation will be added to all the k8s resources managed by privado
-customAnnotations: {}
 
 
-# values related to registry secrets & cron
+# values related to Privado's registry secrets & cron
 registry:
+  # enables or disables usage of privado's Registry
+  # disabling this would also mean that the organization 
+  # would use self-maintained secrets with the deployment
+  enable: true
   region: "{{ if .Values.base.isProduction }} {{ .Values.base.prodRegion }} {{ else }} {{ .Values.base.testRegion }} {{ end }}"
   roleName: ecr-token-helper
   serviceAccountName: sa-ecr-token-helper
   roleBindingName: ecr-token-helper
   cronName: ecr-token-helper
   cronSchedule: "0 */6 * * *"
-  cronPodRestartPolicy: OnFailure
+  cronPodRestartPolicy: OnFailure 
+  cronjobLabels:  # key: value
+  cronjobAnnotations: # key: value
   image:
     name: public.ecr.aws/privado/awscli-kubectl
     tag: latest
@@ -35,19 +34,25 @@ registry:
     "helm.sh/hook": "pre-install,pre-upgrade"
   secrets:
     name: ecr-iam-secrets
+    labels:   # key: value
+    annotations:    # key: value
     AWS_ACCESS_KEY_ID: 
     AWS_SECRET_ACCESS_KEY: 
   dockerhub:
     # keep value of below flag as true if you are using images from dockerhub
     enable: false
-#    The namespace is the first part of a Docker image name, followed by the repository name.
-#    The general format for referencing Docker images is: namespace/repository:tag
+    # The namespace is the first part of a Docker image name: namespace/repository:tag
     namespace: privadoai
     username:
     password:
 
 
-updates:
+# values related to auto-updating deployment images
+autoupdates:
+  # enables or disables autoupdates for deployment
+  # supports ECR and DockerHub
+  # registry.secrets need to be configured
+  enable: true
   annotationName: "checksum/image-sha256"
   roleName: updater-role
   serviceAccountName: updater-sa
@@ -55,11 +60,13 @@ updates:
   cronName: updater
   cronSchedule: "*/10 * * * *"
   cronPodRestartPolicy: OnFailure
+  cronjobLabels:  # key: value
+  cronjobAnnotations: # key: value
   image:
     name: public.ecr.aws/privado/awscli-kubectl
     tag: latest
 
-
+# node affinity and toleration configurations for Privado resources
 node:
   affinity:
     enable: false
@@ -74,6 +81,9 @@ node:
 
 # specific values related to ingress
 ingress:
+  # enables or disables Privado-provisioned Ingress
+  # Disabling would mean the Organization will provision the network routing resource
+  enable: true
   name: privado-ingress
   # needs this value from customer for their ingressClass
   # since most annotation-based support for controllers is now deprecated
@@ -87,11 +97,15 @@ ingress:
 # Values related to mongo.yaml
 mongo:
   statefulSetName: mongo
-  image:
+  statefulSetLabels:    # key: value 
+  statefulSetAnnotations:    # key: value 
+  image: 
     name: percona/percona-server-mongodb
     tag: "5.0"
   runAsUser: 0
   serviceName: mongo-service
+  serviceLabels:    # key: value
+  serviceAnnotations:    # key: value
   servicePort: 27017
   containerPort: 27017
   wiredTigerCacheSizeGB: "4"
@@ -111,10 +125,14 @@ mongo:
     annotations:
   secrets:
     name: mongo-secrets
-    MONGO_INITDB_ROOT_USERNAME: 
-    MONGO_INITDB_ROOT_PASSWORD: 
+    labels:    # key: value
+    annotations:    # key: value
+    MONGO_INITDB_ROOT_USERNAME: ""
+    MONGO_INITDB_ROOT_PASSWORD: ""
   encryptionSecret:
     name: mongo-encrpytion-secret
+    labels:    # key: value
+    annotations:    # key: value
     mountDirectory: "/keys"
     mountPath: "{{ .Values.mongo.encryptionSecret.mountDirectory }}/mong_opener"  # use with tpl
     # generated using `openssl rand -base64 32`
@@ -138,15 +156,19 @@ config:
     SCANNER_APP_INSPECTOR_IMAGE_URL:
 
 
-# Values related to andromeda.yaml
+# Values related to andromeda.yaml 
 andromeda:
   deploymentName: andromeda
+  deploymentLabels:    # key: value 
+  deploymentAnnotations:    # key: value 
   replicas: 1
-  image:
+  image: 
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/andromeda"
     tag: latest
   podAppLabel: andromeda
   serviceName: andromeda-service
+  serviceLabels:    # key: value
+  serviceAnnotations:    # key: value
   serviceType: ClusterIP
   servicePort: 6001
   containerPort: 80
@@ -233,7 +255,7 @@ andromeda:
     CONFIG_AI_SERVICE_PATH: ""
 
 
-# Values related to janus.yaml
+# Values related to janus.yaml 
 janus:
   volumes:
     storageClass: "efs-sc"    # NEEDS-CUSTOMER-INPUT  # should support RWX
@@ -250,15 +272,19 @@ janus:
       mountPath: "/root/.gradle"
 
 
-# Values related to bishamonten.yaml
+# Values related to bishamonten.yaml 
 bishamonten:
   deploymentName: bishamonten
+  deploymentLabels:    # key: value
+  deploymentAnnotations:    # key: value
   replicas: 1
-  image:
+  image: 
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/bishamonten"
     tag: latest
   podAppLabel: bishamonten
   serviceName: bishamonten-service
+  serviceLabels:    # key: value
+  serviceAnnotations:    # key: value
   serviceType: ClusterIP
   servicePort: 4000
   containerPort: 4000
@@ -275,18 +301,21 @@ bishamonten:
     mountPath: "/home/bishamonten/build/{{ .Values.bishamonten.volumeHostConfig.subPath }}"   # use with tpl
   config:
     hostConfig:
-      host: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'   # use with tpl
+      host: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'   # use with tpl 
       accountHost: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'    # use with tpl
       isPremiseVersion: 1
 
+
 mastervendor:
+  enable: false
   image:
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/master-vendor-base-image"
     tag: latest
   podRestartPolicy: Never
   podAppLabel: mastervendor
-  serviceName: mastervendor-service
   jobName: mastervendor
+  jobLabels:    # key: value
+  jobAnnotations:    # key: value
   resources:
     requests:
       cpu: "0.5"
@@ -294,6 +323,7 @@ mastervendor:
     limits:
       cpu:
       memory:
+
 
 websitescan:
   resources:

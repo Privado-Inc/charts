@@ -6,16 +6,6 @@ metadata:
     {{- range $key, $val := .Values.janus.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
-
 spec:
   storageClassName: {{ .Values.janus.volumes.storageClass }} 
   accessModes:
@@ -34,15 +24,6 @@ metadata:
     {{- range $key, $val := .Values.janus.volumes.annotations }}
     {{ $key }}: {{ $val | quote }}
     {{- end }}
-{{- if .Values.customAnnotations }}
-{{- toYaml .Values.customAnnotations | nindent 4 }}
-{{- end }}
-  {{- if .Values.customLabels }}
-  labels:
-{{- if .Values.customLabels }}
-{{ toYaml .Values.customLabels | nindent 4}}
-{{- end }}
-  {{- end }}
 spec:
   storageClassName: {{ .Values.janus.volumes.storageClass }} 
   accessModes:

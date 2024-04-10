@@ -1,0 +1,157 @@
+{{- if .Values.autoupdates.enable }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.autoupdates.roleName }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - deployments
+    verbs:
+      - 'get'
+      - 'list'
+  - apiGroups: ["extensions", "apps"]
+    resources:
+      - deployments
+    verbs:
+      - 'get'
+      - 'patch'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.autoupdates.roleBindingName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.autoupdates.serviceAccountName }}
+roleRef:
+  kind: Role
+  name: {{ .Values.autoupdates.roleName }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.autoupdates.serviceAccountName }}
+---
+{{- if .Capabilities.APIVersions.Has "batch/v1/CronJob" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ .Values.autoupdates.cronName }}
+  labels:
+    {{- range $key, $val := .Values.autoupdates.cronjobLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations:
+    {{- range $key, $val := .Values.autoupdates.cronjobAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+spec:
+  schedule: {{ .Values.autoupdates.cronSchedule | quote }}
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Values.autoupdates.serviceAccountName }}
+          restartPolicy: {{ .Values.autoupdates.cronPodRestartPolicy }}
+          {{- if .Values.node.affinity.enable }}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: {{ .Values.node.affinity.key }}
+                        operator: {{ .Values.node.affinity.operator }}
+          {{- end }}
+          {{- if .Values.node.toleration.enable }}
+          tolerations:
+          - key: {{ .Values.node.toleration.key }}
+            operator: {{ .Values.node.toleration.operator }}
+            effect: {{ .Values.node.toleration.effect }}
+          {{- end }}
+          containers:
+            - name: updater
+              image: {{ .Values.autoupdates.image.name }}:{{ .Values.autoupdates.image.tag }}
+              imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+              command:
+                - /bin/bash
+                - -c
+                - |-
+                  set -e
+                  NAMESPACE={{ .Release.Namespace }}
+                  {{- if .Values.registry.dockerhub.enable }}
+                  # Assuming Docker Hub is enabled and credentials are provided
+                  echo "Using Docker Hub for image updates"
+                  # Function to get Docker Hub image SHA
+                  function get_dockerhub_sha() {
+                    REPO_NAME=$1
+                    TAG=$2
+                    TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'$DOCKERHUB_USERNAME'", "password": "'$DOCKERHUB_PASSWORD'"}' "https://hub.docker.com/v2/users/login/" | jq -r .token)
+                    IMAGE_SHA=$(curl -s -H "Authorization: Bearer ${TOKEN}" "https://hub.docker.com/v2/namespaces/${DOCKER_HUB_NAMESPACE}/repositories/${REPO_NAME}/tags/${TAG}/" | jq -r '.images[0].digest')
+                    echo $IMAGE_SHA
+                  }
+                  {{- else }}
+                  # Assuming AWS ECR is used
+                  echo "Using AWS ECR for image updates"
+                  # Function to get AWS ECR image SHA
+                  function get_ecr_sha() {
+                    REPO_NAME=$1
+                    TAG=$2
+                    IMAGE_SHA=`aws ecr describe-images --repository-name ${REPO_NAME} --region ${AWS_DEFAULT_REGION} --image-ids imageTag=${TAG} | jq -r ".imageDetails[0].imageDigest"`
+
+                    echo $IMAGE_SHA
+                  }
+                  {{- end }}
+
+                  # Function to check and patch deployment if there's an image SHA mismatch
+                  function check_and_patch_deployment() {
+                    DEPLOYMENT_NAME=$1
+                    POD_APP_LABEL=$2
+                    IMAGE_NAME=$3
+                    IMAGE_TAG=$4
+                    if [ {{ .Values.registry.dockerhub.enable }} == "true" ]; then
+                      LATEST_IMAGE_SHA=$(get_dockerhub_sha $IMAGE_NAME $IMAGE_TAG)
+                    else
+                      LATEST_IMAGE_SHA=$(get_ecr_sha $IMAGE_NAME $IMAGE_TAG)
+                    fi
+                    POD=`kubectl -n $NAMESPACE get pods -l "app=$POD_APP_LABEL" -o name | head -1`
+                    CURRENT_IMAGE_SHA=`kubectl -n $NAMESPACE get $POD -o jsonpath="{..imageID}" | cut -f 2 -d "@"`
+
+                    echo "> Current $DEPLOYMENT_NAME SHA: $CURRENT_IMAGE_SHA"
+                    echo "> Latest $DEPLOYMENT_NAME SHA: $LATEST_IMAGE_SHA"
+                    if [[ $CURRENT_IMAGE_SHA != $LATEST_IMAGE_SHA ]]; then
+                      echo "> Update for $POD found"
+                      echo "> Applying patch to $DEPLOYMENT_NAME"
+                      kubectl -n $NAMESPACE patch deployment $DEPLOYMENT_NAME -p "{\"spec\": {\"template\":{\"metadata\":{\"annotations\":{\"{{ .Values.autoupdates.annotationName }}\":\"'$LATEST_IMAGE_SHA'\"}}}} }"
+                    fi
+                  }
+
+                  # Check and patch Andromeda deployment
+                  echo "Checking updates for {{ .Values.andromeda.deploymentName }}"
+
+                  check_and_patch_deployment "{{ .Values.andromeda.deploymentName }}" "{{ .Values.andromeda.podAppLabel }}" "{{ splitList "/" (tpl .Values.andromeda.image.name .) | last }}" "{{ .Values.andromeda.image.tag }}"
+
+                  # Check and patch Bishamonten deployment
+                  echo "Checking updates for {{ .Values.bishamonten.deploymentName }}"
+                  check_and_patch_deployment "{{ .Values.bishamonten.deploymentName }}" "{{ .Values.bishamonten.podAppLabel }}" "{{ splitList "/" (tpl .Values.bishamonten.image.name .) | last }}" "{{ .Values.bishamonten.image.tag }}"
+              envFrom:
+              - secretRef:
+                  name: {{ .Values.registry.secrets.name }}
+              env:
+                - name: SECRET_NAME
+                  value: {{ .Values.base.imagePullSecret }}
+                - name: AWS_DEFAULT_REGION
+                  value: {{ tpl .Values.registry.region . }}
+                - name: NAMESPACE
+                  value: {{ .Release.Namespace }}
+                - name: DOCKER_HUB_NAMESPACE
+                  value: {{ .Values.registry.dockerhub.namespace }}
+
+{{- end}}

@@ -1,0 +1,83 @@
+{{- if .Values.registry.enable }}
+{{- if .Capabilities.APIVersions.Has "batch/v1/CronJob" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ .Values.registry.cronName }}
+  labels:
+    {{- range $key, $val := .Values.registry.cronjobLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations:
+    {{- range $key, $val := .Values.registry.cronjobAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+spec:
+  schedule: {{ .Values.registry.cronSchedule | quote }}
+  successfulJobsHistoryLimit: 0
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Values.registry.serviceAccountName }}
+          restartPolicy: {{ .Values.registry.cronPodRestartPolicy }}
+          {{- if .Values.node.affinity.enable }}
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: {{ .Values.node.affinity.key }}
+                        operator: {{ .Values.node.affinity.operator }}
+          {{- end }}
+          {{- if .Values.node.toleration.enable }}
+          tolerations:
+          - key: {{ .Values.node.toleration.key }}
+            operator: {{ .Values.node.toleration.operator }}
+            effect: {{ .Values.node.toleration.effect }}
+          {{- end }}
+          containers:
+          - name: ecr-token-helper
+            image: {{ .Values.registry.image.name }}:{{ .Values.registry.image.tag }}
+            imagePullPolicy: {{ .Values.base.imagePullPolicy }}
+            command:
+              - /bin/sh
+              - -c
+              - |-
+                kubectl delete secret -n $NAMESPACE --ignore-not-found $SECRET_NAME
+                if [ -n "$DOCKERHUB_USERNAME" ]; then
+                  kubectl create secret -n $NAMESPACE docker-registry $SECRET_NAME \
+                  --docker-server=https://index.docker.io/v1/ \
+                  --docker-username=$DOCKERHUB_USERNAME \
+                  --docker-password=$DOCKERHUB_PASSWORD
+                else
+                  TOKEN=`aws ecr get-login-password --region ${REGION} | cut -d' ' -f6`
+                  kubectl create secret -n $NAMESPACE docker-registry $SECRET_NAME \
+                  --docker-server=$ECR_REPOSITORY \
+                  --docker-username=AWS \
+                  --docker-password=$TOKEN
+                fi
+            envFrom:
+            - secretRef:
+                name: {{ .Values.registry.secrets.name }}
+            env:
+              - name: SECRET_NAME
+                value: {{ .Values.base.imagePullSecret }}
+              {{- if .Values.registry.secrets.AWS_ACCESS_KEY_ID }}
+              - name: REGION
+                value: {{ tpl .Values.registry.region . }}
+              - name: ECR_REPOSITORY
+                value: 638117407428.dkr.ecr.{{ tpl .Values.registry.region . | trim }}.amazonaws.com
+              {{- end }}
+              {{- if .Values.registry.dockerhub.enable }}
+              - name: DOCKERHUB_USERNAME
+                value: {{ .Values.registry.dockerhub.username }}
+              - name: DOCKERHUB_PASSWORD
+                value: {{ .Values.registry.dockerhub.password }}
+              {{- end }}
+              - name: NAMESPACE
+                value: {{ .Release.Namespace }}
+{{- end }}
