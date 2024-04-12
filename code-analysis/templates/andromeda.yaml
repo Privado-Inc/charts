@@ -158,7 +158,7 @@ spec:
         app: {{ .Values.andromeda.podAppLabel }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum | quote }}
-        checksum/enterprise.conf: {{ include (print $.Template.BasePath "/config.andromeda-enterpise-conf.yaml") . | sha256sum | quote }}
+        checksum/enterprise.conf: {{ include (print $.Template.BasePath "/secrets.andromeda-enterpise-conf.yaml") . | sha256sum | quote }}
         checksum/nginx.conf: {{ include (print $.Template.BasePath "/config.andromeda-nginx-conf.yaml") . | sha256sum | quote }}
     spec:
       imagePullSecrets:
@@ -259,8 +259,8 @@ spec:
         persistentVolumeClaim:
           claimName: {{ .Values.andromeda.volumes.scanResultsVolume.claimName }}
       - name: enterprise-conf
-        configMap:
-          name: andromeda-enterprise-conf
+        secret:
+          secretName: andromeda-enterprise-conf
       - name: nginx-conf
         configMap:
           name: andromeda-nginx-conf

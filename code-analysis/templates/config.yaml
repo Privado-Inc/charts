@@ -14,8 +14,24 @@ data:
   K8S_M2CACHE_PVC_NAME: {{ .Values.janus.volumes.m2Volume.claimName }}
   K8S_GRADLECACHE_PVC_NAME: {{ .Values.janus.volumes.gradleVolume.claimName }}
   K8S_IMAGE_PULL_SECRET: {{ .Values.base.imagePullSecret }}
-  K8S_WEBSITE_SCAN_MIN_CPU: {{ .Values.websitescan.resources.requests.cpu }}
+
   K8S_WEBSITE_SCAN_MIN_RAM: {{ .Values.websitescan.resources.requests.memory }}
+  K8S_WEBSITE_SCAN_MIN_CPU: {{ .Values.websitescan.resources.requests.cpu }}
+  {{- if .Values.websitescan.resources.limits.memory }}
+  K8S_WEBSITE_SCAN_MAX_RAM: {{ .Values.websitescan.resources.limits.memory | quote }}
+  {{- end }}
+  {{- if .Values.websitescan.resources.limits.cpu }}
+  K8S_WEBSITE_SCAN_MAX_CPU: {{ .Values.websitescan.resources.limits.cpu | quote }}
+  {{- end }}
+  
+  SCANNER_MINIMUM_RAM: {{ .Values.janus.resources.requests.memory | quote }}
+  SCANNER_MINIMUM_CPU: {{ .Values.janus.resources.requests.cpu | quote }}
+  {{- if .Values.janus.resources.limits.memory }}
+  SCANNER_MAXIMUM_RAM: {{ .Values.janus.resources.limits.memory | quote }}
+  {{- end }}
+  {{- if .Values.janus.resources.limits.cpu }}
+  SCANNER_MAXIMUM_CPU: {{ .Values.janus.resources.limits.cpu | quote }}
+  {{- end }}
 
   {{- if .Values.andromeda.node.hostname }}
   K8S_NODE_HOST_NAME: {{ .Values.andromeda.node.hostname }}

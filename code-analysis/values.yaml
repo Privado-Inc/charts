@@ -148,8 +148,6 @@ config:
     # which works as env variables for andromeda
     DEPLOYMENT_GROUP_NAME: "enterprise-env"
     SCANNER_KIND: k8s
-    SCANNER_MINIMUM_RAM: 3Gi
-    SCANNER_MINIMUM_CPU: 3
   # values added here will be populated only if value is defined
   optionalData:
     SCANNER_OSS_IMAGE_URL:
@@ -213,50 +211,61 @@ andromeda:
       storage: 15Gi
       mountPath: "/home/ubuntu/install/scan_results"
   enterpriseConf:
-    PRIVADO_LICENSE_USER_HASH: ""
-    PRIVADO_LICENSE_PRIVATE_KEY: ""
+    secretLabels:    # key: value
+    secretAnnotations:    # key: value
+    values:
+      PRIVADO_LICENSE_USER_HASH: ""
+      PRIVADO_LICENSE_PRIVATE_KEY: ""
 
-    CONFIG_HUERISTICS_PSW: ""
-    CONFIG_USERS_PSW: ""
-    CONFIG_SCANMANAGER_PSW: ""
-    CONFIG_CODE_ENGINE_MASTER_PSW: ""
-    CONFIG_ASSESSMENTS_PSW: ""
+      CONFIG_HUERISTICS_PSW: ""
+      CONFIG_USERS_PSW: ""
+      CONFIG_SCANMANAGER_PSW: ""
+      CONFIG_CODE_ENGINE_MASTER_PSW: ""
+      CONFIG_ASSESSMENTS_PSW: ""
 
-    CUSTOMER_GITLAB_HOST: "CUSTOMER_GITLAB_HOST"
-    CUSTOMER_GITLAB_APP_ID: "CUSTOMER_GITLAB_APP_ID"
-    CUSTOMER_GITLAB_APP_SECRET: "CUSTOMER_GITLAB_APP_SECRET"
+      CUSTOMER_GITLAB_HOST: "CUSTOMER_GITLAB_HOST"
+      CUSTOMER_GITLAB_APP_ID: "CUSTOMER_GITLAB_APP_ID"
+      CUSTOMER_GITLAB_APP_SECRET: "CUSTOMER_GITLAB_APP_SECRET"
 
-    CUSTOMER_GH_APP_ID: ''
-    CUSTOMER_GH_APP_KEY: ""
-    CUSTOMER_GH_WEBHOOK_SECRET: ''
+      CUSTOMER_GH_APP_ID: ''
+      CUSTOMER_GH_APP_KEY: ""
+      CUSTOMER_GH_WEBHOOK_SECRET: ''
 
-    CUSTOMER_BITBUCKET_CLOUD_APP_KEY: 'CUSTOMER_BITBUCKET_CLOUD_APP_KEY'
-    CUSTOMER_BITBUCKET_CLOUD_APP_SECRET: 'CUSTOMER_BITBUCKET_CLOUD_APP_SECRET'
+      CUSTOMER_BITBUCKET_CLOUD_APP_KEY: 'CUSTOMER_BITBUCKET_CLOUD_APP_KEY'
+      CUSTOMER_BITBUCKET_CLOUD_APP_SECRET: 'CUSTOMER_BITBUCKET_CLOUD_APP_SECRET'
 
-    SSO_ENABLED_FOR_CUSTOMER: "__OKTA_ENABLED__"
-    CUSTOMER_SSO_DOMAIN: "__CUSTOMER_SSO_DOMAIN__"
-    CUSTOMER_SSO_CLIENT_ID: "__CUSTOMER_SSO_CLIENT_ID__"
-    CUSTOMER_SSO_SUPER_ADMIN_EMAIL: "__CUSTOMER_OKTA_SUPER_ADMIN__"
-    CUSTOMER_SSO_TYPE: "__CUSTOMER_SSO_TYPE__"
+      SSO_ENABLED_FOR_CUSTOMER: "__OKTA_ENABLED__"
+      CUSTOMER_SSO_DOMAIN: "__CUSTOMER_SSO_DOMAIN__"
+      CUSTOMER_SSO_CLIENT_ID: "__CUSTOMER_SSO_CLIENT_ID__"
+      CUSTOMER_SSO_SUPER_ADMIN_EMAIL: "__CUSTOMER_OKTA_SUPER_ADMIN__"
+      CUSTOMER_SSO_TYPE: "__CUSTOMER_SSO_TYPE__"
 
-    HAS_NO_INTERNET_CONNECTION: "false"
-    CUSTOMER_EMAIL_HOST: "__EMAIL_HOST__"
-    CUSTOMER_EMAIL_PORT: "__EMAIL_PORT__"  # (587 for TLS, 465 for SSL, or 25 for non-encrypted)
-    CUSTOMER_EMAIL_USE_TLS: "__EMAIL_USE_TLS__"  # Set to 1 if your SMTP server uses TLS, 0 if not
-    CUSTOMER_EMAIL_USE_SSL: "__EMAIL_USE_SSL__"  # Set to 1 if your SMTP server uses SSL, 0 if not
-    CUSTOMER_EMAIL_HOST_USER: "__EMAIL_HOST_USER__"  # Your SMTP username
-    CUSTOMER_EMAIL_HOST_PASSWORD: "__EMAIL_HOST_PASSWORD__"
-    CUSTOMER_EMAIL_FROM: "__EMAIL_EMAIL_FROM__"
-    CUSTOMER_SUPPORT_EMAIL: "__EMAIL_EMAIL_SUPPORT__"
-    CUSTOMER_EMAIL_SSL_CERTFILE: "__EMAIL_SSL_CERT__"
-    CUSTOMER_EMAIL_SSL_KEYFILE: "__EMAIL_SSL_KEY__"
+      HAS_NO_INTERNET_CONNECTION: "false"
+      CUSTOMER_EMAIL_HOST: "__EMAIL_HOST__"
+      CUSTOMER_EMAIL_PORT: "__EMAIL_PORT__"  # (587 for TLS, 465 for SSL, or 25 for non-encrypted)
+      CUSTOMER_EMAIL_USE_TLS: "__EMAIL_USE_TLS__"  # Set to 1 if your SMTP server uses TLS, 0 if not
+      CUSTOMER_EMAIL_USE_SSL: "__EMAIL_USE_SSL__"  # Set to 1 if your SMTP server uses SSL, 0 if not
+      CUSTOMER_EMAIL_HOST_USER: "__EMAIL_HOST_USER__"  # Your SMTP username
+      CUSTOMER_EMAIL_HOST_PASSWORD: "__EMAIL_HOST_PASSWORD__"
+      CUSTOMER_EMAIL_FROM: "__EMAIL_EMAIL_FROM__"
+      CUSTOMER_SUPPORT_EMAIL: "__EMAIL_EMAIL_SUPPORT__"
+      CUSTOMER_EMAIL_SSL_CERTFILE: "__EMAIL_SSL_CERT__"
+      CUSTOMER_EMAIL_SSL_KEYFILE: "__EMAIL_SSL_KEY__"
 
-    CONFIG_AI_SERVICE_AVAILABLE: "false"
-    CONFIG_AI_SERVICE_PATH: ""
+      CONFIG_AI_SERVICE_AVAILABLE: "false"
+      CONFIG_AI_SERVICE_PATH: ""
 
 
 # Values related to janus.yaml 
+# for each provisioned code-scanner
 janus:
+  resources:
+    requests:
+      cpu: "3.0"
+      memory: "3Gi"
+    limits:
+      cpu:
+      memory:
   volumes:
     storageClass: ""    # NEEDS-CUSTOMER-INPUT  # should support RWX
     accessModes: [ "ReadWriteMany" ]    # NEEDS-CUSTOMER-INPUT # depends on andromeda.node.hostname
@@ -326,7 +335,13 @@ mastervendor:
 
 
 websitescan:
+  image:
+    name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/party-scanner"
+    tag: latest
   resources:
     requests:
       cpu: 200m
       memory: 200Mi
+    limits:
+      cpu:
+      memory:
