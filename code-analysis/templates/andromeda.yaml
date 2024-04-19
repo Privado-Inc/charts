@@ -205,6 +205,8 @@ spec:
             name: {{ .Values.config.name }}
         - secretRef:
             name: {{ .Values.mongo.secrets.name }}
+        - secretRef:
+            name: andromeda-enterprise-conf
         {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory .Values.andromeda.resources.limits.cpu .Values.andromeda.resources.limits.memory }}
         resources:
           {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory }}
