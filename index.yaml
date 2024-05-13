@@ -3,6 +3,17 @@ entries:
   code-analysis:
   - apiVersion: v2
     appVersion: "1.0"
+    created: "2024-05-13T17:06:11.897251765Z"
+    description: Helm chart for Privado Code Analysis Engine
+    digest: 86ff8a1fd8e19ae26b2fe8f74d2ac749018db8caff81163738b8aa3331d18072
+    icon: https://uploads-ssl.webflow.com/5ec4dc8db66aa018f257c00f/611c2d51857811724661bcda_Full%20Logo%2032px.svg
+    name: code-analysis
+    type: application
+    urls:
+    - https://github.com/Privado-Inc/charts/releases/download/code-analysis-0.2.1/code-analysis-0.2.1.tgz
+    version: 0.2.1
+  - apiVersion: v2
+    appVersion: "1.0"
     created: "2024-04-12T21:17:30.314801077Z"
     description: Helm chart for Privado Code Analysis Engine
     digest: 4bf609060f8b4c4c1e7c05872e38c0868ad67742ccefca62ed627075800a356b
@@ -45,4 +56,4 @@ entries:
     urls:
     - https://github.com/Privado-Inc/charts/releases/download/code-analysis-0.1.4/code-analysis-0.1.4.tgz
     version: 0.1.4
-generated: "2024-04-12T21:17:30.314817488Z"
+generated: "2024-05-13T17:06:11.897276652Z"
