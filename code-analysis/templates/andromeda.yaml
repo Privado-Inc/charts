@@ -205,6 +205,15 @@ spec:
             name: {{ .Values.config.name }}
         - secretRef:
             name: {{ .Values.mongo.secrets.name }}
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.andromeda.containerPort }}
+          failureThreshold: 5
+          initialDelaySeconds: 150
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 3
         {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory .Values.andromeda.resources.limits.cpu .Values.andromeda.resources.limits.memory }}
         resources:
           {{- if or .Values.andromeda.resources.requests.cpu .Values.andromeda.resources.requests.memory }}
