@@ -20,13 +20,7 @@ data:
     server_names_hash_bucket_size  128;
     
     server {
-       listen 80;
-       server_name _SERVER_NAME_;
-       return 301 https://$host$request_uri;
-    }
-
-    server {
-       listen 80;
+       listen 80 default_server;
        server_name {{ .Values.base.host }} {{ .Values.andromeda.serviceName }}.{{ .Release.Namespace }}.svc.{{ .Values.base.clusterDomain }} localhost 127.0.0.1;
 
        location /ce/ml/ {
