@@ -1,0 +1,133 @@
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  env:
+    - name: DEPLOYMENT_GROUP_NAME
+      value: "enterprise-env"
+    - name: AI_SERVICE_ANDROMEDA_HOST
+      value: "http://andromeda-service.privado.svc.cluster.local:6001" # NEEDS-CUSTOMER-INPUT
+    - name: CHROMA_HOST
+      value: "ai-service-chroma-chromadb.privado.svc.cluster.local"  # NEEDS-CUSTOMER-INPUT [without 'http://' prefix]
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: "all"
+  labels: { } # Add custom labels here
+  annotations: { } # Add custom annotations here
+
+image:
+  repository: 638117407428.dkr.ecr.eu-west-1.amazonaws.com/ai-service-on-premise
+  tag: latest
+  pullPolicy: Always
+  imagePullSecret: ai-service-ecr-secret
+
+privadoAwsSecrets:
+  secretName: ai-service-ecr-secret
+  secretAccessKeyId: "_CUSTOMER_AWS_ACCESS_KEY_ID_"  # NEEDS-CUSTOMER-INPUT
+  secretAccessKey: "_CUSTOMER_AWS_SECRET_ACCESS_KEY_"  # NEEDS-CUSTOMER-INPUT
+  annotations: { }  # Add custom labels here
+
+serviceAccount:
+  name: ai-service-account
+  create: true
+  automount: true
+  annotations: { }  # Add custom labels here
+  labels: { }  # Add custom annotations here
+
+resources:
+  limits:
+    nvidia.com/gpu: 1
+  requests:
+    cpu: "2000m"
+    memory: "4Gi"
+    nvidia.com/gpu: 1
+
+nodeSelector:
+  node.kubernetes.io/instance-type: g5.xlarge  # NEEDS-CUSTOMER-INPUT
+
+# values related to auto-updating the deployment when the ai-service image is updated
+autoupdates:
+  podAppLabel: ai-service
+  deploymentName: ai-service
+  annotationName: "checksum/image-sha256"
+  serviceAccountName: ai-service-updater-account
+  awsRegion: "eu-west-1"
+  roleName: ai-service-updater-role
+  roleBindingName: ai-service-updater-rb
+  cronName: ai-service-updater
+  cronSchedule: "*/10 * * * *"
+  cronPodRestartPolicy: OnFailure
+  cronjobLabels:  # key: value
+  cronjobAnnotations: # key: value
+  image:
+    name: public.ecr.aws/privado/awscli-kubectl
+    tag: latest
+    imagePullPolicy: Always
+    imagePullSecret: ai-service-ecr-secret
+
+livenessProbe:
+  httpGet:
+    path: /ht/
+    port: http
+  initialDelaySeconds: 300
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+readinessProbe:
+  httpGet:
+    path: /ht/
+    port: http
+  initialDelaySeconds: 60
+
+ingress:
+  enabled: false
+  name: ai-service-ingress
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+volumes:
+  - name: ai-service-models-volume
+    persistentVolumeClaim:
+      claimName: ai-service-models-pvc
+  - name: ai-service-log-volume
+    persistentVolumeClaim:
+      claimName: ai-service-log-pvc
+
+volumeMounts:
+  - name: ai-service-log-volume
+    mountPath: "/var/log/uwsgi"
+    readOnly: false
+  - name: ai-service-models-volume
+    mountPath: "/var/models"
+    readOnly: false
+
+persistentVolumeClaim:
+  aiServiceModelsPvc:
+    name: ai-service-models-pvc
+    accessModes: "ReadWriteOnce" # Update ReadWriteMany if autoscaling is enabled
+    resources:
+      requests:
+        storage: 80Gi
+    storageClassName: gp2 # NEEDS-CUSTOMER-INPUT. Adjust the storageClassName as needed.
+  aiServiceLogPvc:
+    name: ai-service-log-pvc
+    accessModes: "ReadWriteOnce"
+    resources:
+      requests:
+        storage: 10Gi
+    storageClassName: gp2 # NEEDS-CUSTOMER-INPUT
+
+podAnnotations: { } # Add custom labels here
+podLabels: { } # Add custom labels here
+
+nameOverride: ""
+fullnameOverride: ""
+podSecurityContext: { }
+imagePullSecrets: [ ]
+securityContext: { }

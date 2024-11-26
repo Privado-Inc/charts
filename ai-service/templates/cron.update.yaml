@@ -1,0 +1,113 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.autoupdates.roleName }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - deployments
+    verbs:
+      - 'get'
+      - 'list'
+  - apiGroups: ["extensions", "apps"]
+    resources:
+      - deployments
+    verbs:
+      - 'get'
+      - 'patch'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.autoupdates.roleBindingName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.autoupdates.serviceAccountName }}
+roleRef:
+  kind: Role
+  name: {{ .Values.autoupdates.roleName }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.autoupdates.serviceAccountName }}
+---
+{{- if .Capabilities.APIVersions.Has "batch/v1/CronJob" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ .Values.autoupdates.cronName }}
+  labels:
+    {{- range $key, $val := .Values.autoupdates.cronjobLabels }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+  annotations:
+    {{- range $key, $val := .Values.autoupdates.cronjobAnnotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+spec:
+  schedule: {{ .Values.autoupdates.cronSchedule | quote }}
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Values.autoupdates.serviceAccountName }}
+          restartPolicy: {{ .Values.autoupdates.cronPodRestartPolicy }}
+          containers:
+            - name: updater
+              image: {{ .Values.autoupdates.image.name }}:{{ .Values.autoupdates.image.tag }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - /bin/bash
+                - -c
+                - |-
+                  set -e
+                  NAMESPACE={{ .Release.Namespace }}
+                  echo "Checking for image updates on AWS ECR for {{ .Values.autoupdates.deploymentName }}"
+                  # Function to get AWS ECR image SHA
+                  function get_ecr_sha() {
+                    REPO_NAME=$1
+                    TAG=$2
+                    IMAGE_SHA=`aws ecr describe-images --repository-name ${REPO_NAME} --region ${AWS_REGION} --image-ids imageTag=${TAG} | jq -r ".imageDetails[0].imageDigest"`
+
+                    echo $IMAGE_SHA
+                  }
+
+                  # Function to check and patch deployment if there's an image SHA mismatch
+                  function check_and_patch_deployment() {
+                    DEPLOYMENT_NAME=$1
+                    POD_APP_LABEL=$2
+                    IMAGE_NAME=$3
+                    IMAGE_TAG=$4
+
+                    POD=`kubectl -n $NAMESPACE get pods -l "app.kubernetes.io/name=$POD_APP_LABEL" -o name | head -1`
+                    CURRENT_IMAGE_SHA=`kubectl -n $NAMESPACE get $POD -o jsonpath="{..imageID}" | cut -f 2 -d "@"`
+                    LATEST_IMAGE_SHA=$(get_ecr_sha $IMAGE_NAME $IMAGE_TAG)
+
+                    echo "> Current $DEPLOYMENT_NAME SHA: $CURRENT_IMAGE_SHA"
+                    echo "> Latest $DEPLOYMENT_NAME SHA: $LATEST_IMAGE_SHA"
+                    if [[ $CURRENT_IMAGE_SHA != $LATEST_IMAGE_SHA ]]; then
+                      echo "> Update for $POD found"
+                      echo "> Applying patch to $DEPLOYMENT_NAME"
+                      kubectl -n $NAMESPACE patch deployment $DEPLOYMENT_NAME -p "{\"spec\": {\"template\":{\"metadata\":{\"annotations\":{\"{{ .Values.autoupdates.annotationName }}\":\"'$LATEST_IMAGE_SHA'\"}}}} }"
+                    fi
+                  }
+
+                  check_and_patch_deployment "{{ .Values.autoupdates.deploymentName }}" "{{ .Values.autoupdates.podAppLabel }}" "{{ splitList "/" (tpl .Values.image.repository .) | last }}" "{{ .Values.image.tag }}"
+              envFrom:
+              - secretRef:
+                  name: {{ .Values.image.imagePullSecret }}
+              env:
+                - name: SECRET_NAME
+                  value: {{ .Values.image.imagePullSecret }}
+                - name: AWS_REGION
+                  value: {{ .Values.autoupdates.awsRegion }}
+                - name: NAMESPACE
+                  value: {{ .Release.Namespace }}

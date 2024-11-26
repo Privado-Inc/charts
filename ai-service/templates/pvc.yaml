@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.persistentVolumeClaim.aiServiceModelsPvc.name }}
+spec:
+  accessModes:
+    - "{{ .Values.persistentVolumeClaim.aiServiceModelsPvc.accessModes }}"
+  resources:
+    requests:
+      storage: {{ .Values.persistentVolumeClaim.aiServiceModelsPvc.resources.requests.storage }}
+  storageClassName: {{ .Values.persistentVolumeClaim.aiServiceModelsPvc.storageClassName }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.persistentVolumeClaim.aiServiceLogPvc.name }}
+spec:
+  accessModes:
+    - "{{ .Values.persistentVolumeClaim.aiServiceLogPvc.accessModes }}"
+  resources:
+    requests:
+      storage: {{ .Values.persistentVolumeClaim.aiServiceLogPvc.resources.requests.storage }}
+  storageClassName: {{ .Values.persistentVolumeClaim.aiServiceLogPvc.storageClassName }}
