@@ -24,7 +24,7 @@ The ChromaDB chart is a dependency for the Ai Service chart.
     - Persistent Volume configuration
         - Update the storage class name as needed.
         - Update the storage size as needed.
-    - Update the AWS credentials to provide the access key and secret key.
+    - [Optional] Update the AWS credentials to provide the access key and secret key.
 3. **Updating values.yaml with init.sh.** Instead of manually editing the values.yaml file, the init.sh script can be
    used to set the necessary values.
     - To run the script: `bash init.sh`
@@ -66,11 +66,12 @@ Following steps will deploy ai-service chart:
 
 Following steps will verify the installation of ai-service chart:
 
-1. `kubectl get pods` to verify the Ai Service pods are running.
-2. `kubclt logs -f <pod-name>` to view the container logs of the Ai Service pod.
-3. `kubclt exec -it <pod-name> -- /bin/bash` to access the Ai Service container shell.
+1. `kubectl -n privado get pods` to verify the Ai Service pods are running.
+2. `kubectl -n privado logs -f <pod-name>` to view the container logs of the Ai Service pod.
+3. `kubectl -n privado exec -it <pod-name> -- /bin/bash` to access the Ai Service container shell.
     - `tais` to view the ai-service logs. Following like should be visible:
         - `GET / => generated X bytes in Y msecs (HTTP/1.1 200) 8 headers in Z bytes`
+    - `check-workers` to verify the workers are running. 2 nodes should be online.
 
 Following steps will verify successful integration with Privado backend:
 
@@ -83,5 +84,5 @@ Following steps will verify successful integration with Privado backend:
 
 Following steps will uninstall ai-service chart:
 
-1. `helm uninstall ai-service` to uninstall the Ai Service chart.
-2. `helm uninstall ai-service-chroma` to uninstall the ChromaDB chart.
+1. `helm uninstall ai-service -n privado` to uninstall the Ai Service chart.
+2. `helm uninstall ai-service-chroma -n privado` to uninstall the ChromaDB chart.

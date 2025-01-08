@@ -24,7 +24,11 @@ spec:
         {{- end }}
     spec:
       imagePullSecrets:
-        - name: {{ .Values.image.imagePullSecret }}
+        {{- if .Values.imagePullSecrets }}
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+        {{- end }}
       serviceAccountName: {{ include "ai-service.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

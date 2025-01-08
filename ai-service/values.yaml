@@ -13,6 +13,8 @@ service:
       value: "ai-service-chroma-chromadb.privado.svc.cluster.local"  # NEEDS-CUSTOMER-INPUT [without 'http://' prefix]
     - name: NVIDIA_DRIVER_CAPABILITIES
       value: "all"
+    - name: HF_ACCESS_TOKEN
+      value: "HF_ACCESS_TOKEN_PLACEHOLDER"  # NEEDS-CUSTOMER-INPUT
   labels: { } # Add custom labels here
   annotations: { } # Add custom annotations here
 
@@ -23,6 +25,7 @@ image:
   imagePullSecret: ai-service-ecr-secret
 
 privadoAwsSecrets:
+  useECR: false  # NEEDS-CUSTOMER-INPUT
   secretName: ai-service-ecr-secret
   secretAccessKeyId: "_CUSTOMER_AWS_ACCESS_KEY_ID_"  # NEEDS-CUSTOMER-INPUT
   secretAccessKey: "_CUSTOMER_AWS_SECRET_ACCESS_KEY_"  # NEEDS-CUSTOMER-INPUT
@@ -48,6 +51,7 @@ nodeSelector:
 
 # values related to auto-updating the deployment when the ai-service image is updated
 autoupdates:
+  autoUpdateEnabled: false  # NEEDS-CUSTOMER-INPUT
   podAppLabel: ai-service
   deploymentName: ai-service
   annotationName: "checksum/image-sha256"
@@ -64,7 +68,6 @@ autoupdates:
     name: public.ecr.aws/privado/awscli-kubectl
     tag: latest
     imagePullPolicy: Always
-    imagePullSecret: ai-service-ecr-secret
 
 livenessProbe:
   httpGet:
