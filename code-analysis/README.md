@@ -11,7 +11,3 @@ In the [values.yaml](./values.yaml) file, verify the following attribute:
 4. Resources: All `cpu` and `memory` values.
 5. Storage: All `storage` values to set storage size. As well as the `storageClass` to configure which storage will be used.
 6. Update values in `enterpriseConf`.
-
-
-## Releasing Charts:
-Charts will be released everytime "Chart.version" is updated. To trigger a release, upgrade the version.

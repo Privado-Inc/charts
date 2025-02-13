@@ -8,9 +8,11 @@ service:
     - name: DEPLOYMENT_GROUP_NAME
       value: "enterprise-env"
     - name: AI_SERVICE_ANDROMEDA_HOST
-      value: "http://andromeda-service.privado.svc.cluster.local:6001" # NEEDS-CUSTOMER-INPUT
+      # The andromeda-service prefix corresponds to andromeda.serviceName: andromeda-service in code-analysis/values.yaml
+      # Adjust the andromeda host URL to match your deployment configuration if necessary.
+      value: http://andromeda-service.__ANDRO_NAMESPACE__.svc.__ANDRO_CLUSTER_DOMAIN__:6001
     - name: CHROMA_HOST
-      value: "ai-service-chroma-chromadb.privado.svc.cluster.local"  # NEEDS-CUSTOMER-INPUT [without 'http://' prefix]
+      value: ai-service-chroma-chromadb.__AI_NAMESPACE__.svc.__AI_CLUSTER_DOMAIN__
     - name: NVIDIA_DRIVER_CAPABILITIES
       value: "all"
     - name: HF_ACCESS_TOKEN
@@ -25,10 +27,10 @@ image:
   imagePullSecret: ai-service-ecr-secret
 
 privadoAwsSecrets:
-  useECR: false  # NEEDS-CUSTOMER-INPUT
+  useECR: true  # NEEDS-CUSTOMER-INPUT
   secretName: ai-service-ecr-secret
-  secretAccessKeyId: "_CUSTOMER_AWS_ACCESS_KEY_ID_"  # NEEDS-CUSTOMER-INPUT
-  secretAccessKey: "_CUSTOMER_AWS_SECRET_ACCESS_KEY_"  # NEEDS-CUSTOMER-INPUT
+  secretAccessKeyId: __AWS_ACCESS_KEY_ID__  # NEEDS-CUSTOMER-INPUT
+  secretAccessKey: __AWS_SECRET_ACCESS_KEY__  # NEEDS-CUSTOMER-INPUT
   annotations: { }  # Add custom labels here
 
 serviceAccount:
@@ -113,18 +115,18 @@ volumeMounts:
 persistentVolumeClaim:
   aiServiceModelsPvc:
     name: ai-service-models-pvc
-    accessModes: "ReadWriteOnce" # Update ReadWriteMany if autoscaling is enabled
+    accessModes: "ReadWriteMany" # Update ReadWriteMany if autoscaling is enabled
     resources:
       requests:
         storage: 80Gi
-    storageClassName: gp2 # NEEDS-CUSTOMER-INPUT. Adjust the storageClassName as needed.
+    storageClassName: efs-sc # NEEDS-CUSTOMER-INPUT.
   aiServiceLogPvc:
     name: ai-service-log-pvc
-    accessModes: "ReadWriteOnce"
+    accessModes: "ReadWriteMany"
     resources:
       requests:
         storage: 10Gi
-    storageClassName: gp2 # NEEDS-CUSTOMER-INPUT
+    storageClassName: efs-sc # NEEDS-CUSTOMER-INPUT
 
 podAnnotations: { } # Add custom labels here
 podLabels: { } # Add custom labels here

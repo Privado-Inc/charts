@@ -23,6 +23,8 @@ data:
        listen 80 default_server;
        server_name {{ .Values.base.host }} {{ .Values.andromeda.serviceName }}.{{ .Release.Namespace }}.svc.{{ .Values.base.clusterDomain }} localhost 127.0.0.1;
 
+       add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+       
        location /ce/ml/ {
             limit_req zone=limitmagiclinkcalls burst=10 nodelay;
             add_header Access-Control-Max-Age 3600;
@@ -30,7 +32,6 @@ data:
             add_header Access-Control-Allow-Methods *;
             add_header Access-Control-Allow-Headers *;
             add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
-            add_header Strict-Transport-Security "max-age=63072000;";
             include         uwsgi_params;
             uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
             proxy_read_timeout 180s;
@@ -44,11 +45,23 @@ data:
             add_header Access-Control-Allow-Methods *;
             add_header Access-Control-Allow-Headers *;
             add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
-            add_header Strict-Transport-Security "max-age=63072000;";
             include         uwsgi_params;
             uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
-            proxy_read_timeout 420s;
-            client_max_body_size 800M;
+            proxy_read_timeout 180s;
+            client_max_body_size 100M;
+        }
+
+        location /ce/mobilescans/ {
+            limit_req zone=apilimit burst=40 nodelay;
+            add_header Access-Control-Max-Age 3600;
+            add_header Access-Control-Expose-Headers Content-Length;
+            add_header Access-Control-Allow-Methods *;
+            add_header Access-Control-Allow-Headers *;
+            add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
+            include         uwsgi_params;
+            uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
+            proxy_read_timeout 180s;
+            client_max_body_size 1000M;
         }
 
         location /ac/ {
@@ -58,7 +71,6 @@ data:
             add_header Access-Control-Allow-Methods *;
             add_header Access-Control-Allow-Headers *;
             add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'";
-            add_header Strict-Transport-Security "max-age=63072000;";
             include         uwsgi_params;
             uwsgi_pass      unix:/home/ubuntu/install/code/andromeda-on-premise/andromeda-on-premise.sock;
             proxy_read_timeout 180s;

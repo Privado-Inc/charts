@@ -1,4 +1,3 @@
-
 # --- My values below this
 base:
   isProduction: true
@@ -15,16 +14,16 @@ base:
 # values related to Privado's registry secrets & cron
 registry:
   # enables or disables usage of privado's Registry
-  # disabling this would also mean that the organization 
+  # disabling this would also mean that the organization
   # would use self-maintained secrets with the deployment
-  enable: true
+  enable: true  # NEEDS-CUSTOMER-INPUT use_privado_registry
   region: "{{ if .Values.base.isProduction }} {{ .Values.base.prodRegion }} {{ else }} {{ .Values.base.testRegion }} {{ end }}"
   roleName: ecr-token-helper
   serviceAccountName: sa-ecr-token-helper
   roleBindingName: ecr-token-helper
   cronName: ecr-token-helper
   cronSchedule: "0 */6 * * *"
-  cronPodRestartPolicy: OnFailure 
+  cronPodRestartPolicy: OnFailure
   cronjobLabels:  # key: value
   cronjobAnnotations: # key: value
   image:
@@ -36,8 +35,8 @@ registry:
     name: ecr-iam-secrets
     labels:   # key: value
     annotations:    # key: value
-    AWS_ACCESS_KEY_ID: 
-    AWS_SECRET_ACCESS_KEY: 
+    AWS_ACCESS_KEY_ID: __AWS_ACCESS_KEY_ID__  # NEEDS-CUSTOMER-INPUT
+    AWS_SECRET_ACCESS_KEY: __AWS_SECRET_ACCESS_KEY__  # NEEDS-CUSTOMER-INPUT
   dockerhub:
     # keep value of below flag as true if you are using images from dockerhub
     enable: false
@@ -52,7 +51,7 @@ autoupdates:
   # enables or disables autoupdates for deployment
   # supports ECR and DockerHub
   # registry.secrets need to be configured
-  enable: true
+  enable: true  # NEEDS-CUSTOMER-INPUT enable_auto_updates
   annotationName: "checksum/image-sha256"
   roleName: updater-role
   serviceAccountName: updater-sa
@@ -88,7 +87,7 @@ ingress:
   # needs this value from customer for their ingressClass
   # since most annotation-based support for controllers is now deprecated
   ingressClassName: "" # NEEDS-CUSTOMER-INPUT
-  annotations:  # NEEDS-CUSTOMER-INPUT
+  annotations: # NEEDS-CUSTOMER-INPUT
     kubernetes.io/ingress.class: alb  # may receive deprecated warning
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
@@ -97,9 +96,9 @@ ingress:
 # Values related to mongo.yaml
 mongo:
   statefulSetName: mongo
-  statefulSetLabels:    # key: value 
-  statefulSetAnnotations:    # key: value 
-  image: 
+  statefulSetLabels:    # key: value
+  statefulSetAnnotations:    # key: value
+  image:
     name: percona/percona-server-mongodb
     tag: "5.0"
   runAsUser: 0
@@ -154,13 +153,13 @@ config:
     SCANNER_APP_INSPECTOR_IMAGE_URL:
 
 
-# Values related to andromeda.yaml 
+# Values related to andromeda.yaml
 andromeda:
   deploymentName: andromeda
-  deploymentLabels:    # key: value 
-  deploymentAnnotations:    # key: value 
+  deploymentLabels:    # key: value
+  deploymentAnnotations:    # key: value
   replicas: 1
-  image: 
+  image:
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/andromeda"
     tag: latest
   podAppLabel: andromeda
@@ -177,7 +176,7 @@ andromeda:
     limits:
       cpu:
       memory:
-  node:   # overrides the global node configs
+  node: # overrides the global node configs
     hostname: "" # if customer has NFS storage attached then keep this field empty else keep node's "hostname" having larger resources
     affinity:
       enable: false
@@ -253,10 +252,12 @@ andromeda:
       CUSTOMER_EMAIL_SSL_KEYFILE: "__EMAIL_SSL_KEY__"
 
       CONFIG_AI_SERVICE_AVAILABLE: "false"
-      CONFIG_AI_SERVICE_PATH: ""
+      # Adjust AI service host URL to match your deployment configuration if necessary.
+      # The ai-service prefix corresponds to the ai-service module service name.
+      CONFIG_AI_SERVICE_PATH: http://ai-service.__AI_NAMESPACE__.svc.__AI_CLUSTER_DOMAIN__:8080
 
 
-# Values related to janus.yaml 
+# Values related to janus.yaml
 # for each provisioned code-scanner
 janus:
   resources:
@@ -281,13 +282,13 @@ janus:
       mountPath: "/root/.gradle"
 
 
-# Values related to bishamonten.yaml 
+# Values related to bishamonten.yaml
 bishamonten:
   deploymentName: bishamonten
   deploymentLabels:    # key: value
   deploymentAnnotations:    # key: value
   replicas: 1
-  image: 
+  image:
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/bishamonten"
     tag: latest
   podAppLabel: bishamonten
@@ -310,13 +311,13 @@ bishamonten:
     mountPath: "/home/bishamonten/build/{{ .Values.bishamonten.volumeHostConfig.subPath }}"   # use with tpl
   config:
     hostConfig:
-      host: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'   # use with tpl 
+      host: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'   # use with tpl
       accountHost: '{{ .Values.base.protocol }}://{{ required "A valid .Values.base.host is required" .Values.base.host }}'    # use with tpl
       isPremiseVersion: 1
 
 
 mastervendor:
-  enable: false
+  enable: false  # NEEDS-CUSTOMER-INPUT enable_master_vendor
   image:
     name: "638117407428.dkr.ecr.{{ if .Values.base.isProduction }}{{ .Values.base.prodRegion }}{{ else }}{{ .Values.base.testRegion }}{{ end }}.amazonaws.com/master-vendor-base-image"
     tag: latest
