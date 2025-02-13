@@ -3,6 +3,16 @@ entries:
   ai-service:
   - apiVersion: v2
     appVersion: 1.17.0
+    created: "2025-02-13T15:38:14.503741631Z"
+    description: A Helm chart for Privado AI Service on Kubernetes
+    digest: 0df64ec5f06ed7e39fc1d88faa3e33cd435ae54dd79982128dc175bd5da55a24
+    name: ai-service
+    type: application
+    urls:
+    - https://github.com/Privado-Inc/charts/releases/download/ai-service-0.1.2/ai-service-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: 1.17.0
     created: "2025-01-08T13:26:35.976252734Z"
     description: A Helm chart for Privado AI Service on Kubernetes
     digest: 81e4fb486280890072a50ed3f407e3f2927023e590173c0d9abc3675548327af
@@ -22,6 +32,17 @@ entries:
     - https://github.com/Privado-Inc/charts/releases/download/ai-service-0.1.0/ai-service-0.1.0.tgz
     version: 0.1.0
   code-analysis:
+  - apiVersion: v2
+    appVersion: "1.0"
+    created: "2025-02-13T15:38:14.619169822Z"
+    description: Helm chart for Privado Code Analysis Engine
+    digest: be15371f63a5cc534c4d132e38f8a6acb1c630f0f376e30b971397735b029ecf
+    icon: https://uploads-ssl.webflow.com/5ec4dc8db66aa018f257c00f/611c2d51857811724661bcda_Full%20Logo%2032px.svg
+    name: code-analysis
+    type: application
+    urls:
+    - https://github.com/Privado-Inc/charts/releases/download/code-analysis-0.2.4/code-analysis-0.2.4.tgz
+    version: 0.2.4
   - apiVersion: v2
     appVersion: "1.0"
     created: "2024-11-19T15:02:36.349690003Z"
@@ -99,4 +120,4 @@ entries:
     urls:
     - https://github.com/Privado-Inc/charts/releases/download/code-analysis-0.1.4/code-analysis-0.1.4.tgz
     version: 0.1.4
-generated: "2025-01-08T13:26:35.976278132Z"
+generated: "2025-02-13T15:38:14.619232419Z"
