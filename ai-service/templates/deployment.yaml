@@ -24,6 +24,7 @@ spec:
         {{- end }}
     spec:
       imagePullSecrets:
+        - name: {{ .Values.privadoAwsSecrets.secretName }}
         {{- if .Values.imagePullSecrets }}
         {{- range .Values.imagePullSecrets }}
         - name: {{ . }}
@@ -42,8 +43,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          env:
-            {{- toYaml .Values.service.env | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.aiconfig.name }}
+            - secretRef:
+                name: {{ .Values.privadoHFSecrets.name }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

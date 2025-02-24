@@ -4,21 +4,16 @@ service:
   type: ClusterIP
   port: 8080
   targetPort: 8080
-  env:
-    - name: DEPLOYMENT_GROUP_NAME
-      value: "enterprise-env"
-    - name: AI_SERVICE_ANDROMEDA_HOST
-      # The andromeda-service prefix corresponds to andromeda.serviceName: andromeda-service in code-analysis/values.yaml
-      # Adjust the andromeda host URL to match your deployment configuration if necessary.
-      value: http://andromeda-service.__ANDRO_NAMESPACE__.svc.__ANDRO_CLUSTER_DOMAIN__:6001
-    - name: CHROMA_HOST
-      value: ai-service-chroma-chromadb.__AI_NAMESPACE__.svc.__AI_CLUSTER_DOMAIN__
-    - name: NVIDIA_DRIVER_CAPABILITIES
-      value: "all"
-    - name: HF_ACCESS_TOKEN
-      value: "HF_ACCESS_TOKEN_PLACEHOLDER"  # NEEDS-CUSTOMER-INPUT
-  labels: { } # Add custom labels here
-  annotations: { } # Add custom annotations here
+  labels: { }       # Add custom labels here
+  annotations: { }  # Add custom annotations here
+
+aiconfig:
+  name: ai-config
+  data:
+    DEPLOYMENT_GROUP_NAME: "enterprise-env"
+    AI_SERVICE_ANDROMEDA_HOST: "http://andromeda-service.__ANDRO_NAMESPACE__.svc.__ANDRO_CLUSTER_DOMAIN__:6001"
+    CHROMA_HOST: "ai-service-chroma-chromadb.__AI_NAMESPACE__.svc.__AI_CLUSTER_DOMAIN__"
+    NVIDIA_DRIVER_CAPABILITIES: "all"
 
 image:
   repository: 638117407428.dkr.ecr.eu-west-1.amazonaws.com/ai-service-on-premise
@@ -26,19 +21,26 @@ image:
   pullPolicy: Always
   imagePullSecret: ai-service-ecr-secret
 
+privadoHFSecrets:
+  name: ai-service-huggingface-secret
+  HF_ACCESS_TOKEN: "HF_ACCESS_TOKEN_PLACEHOLDER" # NEEDS-CUSTOMER-INPUT
+  labels: { }                                    # key: value
+  annotations: { }                               # key: value
+
 privadoAwsSecrets:
-  useECR: true  # NEEDS-CUSTOMER-INPUT
+  useECR: true                                # NEEDS-CUSTOMER-INPUT
   secretName: ai-service-ecr-secret
-  secretAccessKeyId: __AWS_ACCESS_KEY_ID__  # NEEDS-CUSTOMER-INPUT
+  secretAccessKeyId: __AWS_ACCESS_KEY_ID__    # NEEDS-CUSTOMER-INPUT
   secretAccessKey: __AWS_SECRET_ACCESS_KEY__  # NEEDS-CUSTOMER-INPUT
-  annotations: { }  # Add custom labels here
+  labels: { }                                 # Add custom labels here
+  annotations: { }                            # Add custom annotations here
 
 serviceAccount:
   name: ai-service-account
   create: true
   automount: true
-  annotations: { }  # Add custom labels here
-  labels: { }  # Add custom annotations here
+  annotations: { }  # Add custom annotations here
+  labels: { }       # Add custom labels here
 
 resources:
   limits:
@@ -115,24 +117,23 @@ volumeMounts:
 persistentVolumeClaim:
   aiServiceModelsPvc:
     name: ai-service-models-pvc
-    accessModes: "ReadWriteMany" # Update ReadWriteMany if autoscaling is enabled
+    accessModes: "ReadWriteMany"   # Update ReadWriteMany if autoscaling is enabled
     resources:
       requests:
         storage: 80Gi
-    storageClassName: efs-sc # NEEDS-CUSTOMER-INPUT.
+    storageClassName: efs-sc       # NEEDS-CUSTOMER-INPUT.
   aiServiceLogPvc:
     name: ai-service-log-pvc
     accessModes: "ReadWriteMany"
     resources:
       requests:
         storage: 10Gi
-    storageClassName: efs-sc # NEEDS-CUSTOMER-INPUT
+    storageClassName: efs-sc       # NEEDS-CUSTOMER-INPUT
 
-podAnnotations: { } # Add custom labels here
-podLabels: { } # Add custom labels here
+podAnnotations: { }                # Add custom labels here
+podLabels: { }                     # Add custom labels here
 
 nameOverride: ""
 fullnameOverride: ""
 podSecurityContext: { }
 imagePullSecrets: [ ]
-securityContext: { }

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.aiconfig.name }}
+data:
+  {{- range $key, $val := .Values.aiconfig.data }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
